@@ -1395,10 +1395,10 @@ dosctptrace(
 
     ++tcp_trace_count;
 
-//    if (run_continuously && (tcp_ptr == NULL)) {
-//      fprintf(stderr, "Did not initialize tcp pair pointer\n");
-//      exit(1);
-//    }
+    if (run_continuously && (sctp_ptr == NULL)) {
+      fprintf(stderr, "Did not initialize sctp pair pointer\n");
+      exit(1);
+    }
 
     /* do time stats */
     if (ZERO_TIME(&ptp_save->first_time)) {
@@ -1414,14 +1414,14 @@ dosctptrace(
     /* before bailing out in "ignore_pair" below, this heuristic breaks */
 
     /* figure out which direction this packet is going */
-//    if (dir == A2B) {
-//	thisdir  = &ptp_save->a2b;
-//	otherdir = &ptp_save->b2a;
-//    } else {
-//	thisdir  = &ptp_save->b2a;
-//	otherdir = &ptp_save->a2b;
-//    }
-//
+    if (dir == A2B) {
+	thisdir  = &ptp_save->a2b;
+	otherdir = &ptp_save->b2a;
+    } else {
+	thisdir  = &ptp_save->b2a;
+	otherdir = &ptp_save->a2b;
+    }
+
 //    /* meta connection stats */
 //    if (SYN_SET(ptcp))
 //	++thisdir->syn_count;
