@@ -1083,7 +1083,7 @@ UpdateConnLists(
     UpdateConnList(tcp_ptr, TRUE, &live_conn_list_head, &live_conn_list_tail);
   }
   
-  /* if we haven't updated the structures for at least update_interval number 
+  /* hejif we haven't updated the structures for at least update_interval number 
    * of seconds, update list of connections and hash table */
   if ((elapsed(last_update_time, current_time) / 1000000) >= update_interval) {
 
