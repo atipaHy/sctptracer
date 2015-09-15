@@ -1350,6 +1350,18 @@ dosctptrace(
     struct sctphdr *psctp,
     void *plast)
 {
+    tcp_pair	*ptp_save;
+    u_short	th_sport;	/* source port */
+    u_short	th_dport;	/* destination port */
+    tcp_seq	th_vertag;	/* verification tag */
+    tcp_seq	th_chksum;	/* checksum */
+    short	ip_len;		/* total length */
+    tcb		*thisdir;
+    tcb		*otherdir;
+    int		sctp_length;
+    int		sctp_data_length;
+    u_long	start;
+    u_long	end;
     /* make sure we have enough of the packet */
     if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
 	if (warn_printtrunc)
@@ -1359,6 +1371,64 @@ dosctptrace(
 	++ctrunc;
 	return(NULL);
     }
+    
+    /* convert interesting fields to local byte order */
+    th_vertag   = ntohl(psctp->th_vertag);
+    th_chksum   = ntohl(psctp->th_chksum);
+    th_sport = ntohs(psctp->th_sport);
+    th_dport = ntohs(psctp->th_dport);
+    //th_win   = ntohs(psctp->th_win);
+    //th_urp   = ntohs(psctp->th_urp);
+    ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
+
+    /* make sure this is one of the connections we want */
+   // ptp_save = FindTTP(pip,ptcp,&dir, &tcp_ptr);
+
+    ++tcp_packet_count;
+
+    if (ptp_save == NULL) {
+	return(NULL);
+    }
+
+    ++tcp_trace_count;
+
+//    if (run_continuously && (tcp_ptr == NULL)) {
+//      fprintf(stderr, "Did not initialize tcp pair pointer\n");
+//      exit(1);
+//    }
+
+    /* do time stats */
+    if (ZERO_TIME(&ptp_save->first_time)) {
+	ptp_save->first_time = current_time;
+    }
+    ptp_save->last_time = current_time;
+
+
+    /* bug fix:  it's legal to have the same end points reused.  The */
+    /* program uses a heuristic of looking at the elapsed time from */
+    /* the last packet on the previous instance and the number of FINs */
+    /* in the last instance.  If we don't increment the fin_count */
+    /* before bailing out in "ignore_pair" below, this heuristic breaks */
+
+    /* figure out which direction this packet is going */
+//    if (dir == A2B) {
+//	thisdir  = &ptp_save->a2b;
+//	otherdir = &ptp_save->b2a;
+//    } else {
+//	thisdir  = &ptp_save->b2a;
+//	otherdir = &ptp_save->a2b;
+//    }
+//
+//    /* meta connection stats */
+//    if (SYN_SET(ptcp))
+//	++thisdir->syn_count;
+//    if (RESET_SET(ptcp))
+//	++thisdir->reset_count;
+//    if (FIN_SET(ptcp))
+//	++thisdir->fin_count;
+//    
+    ///////////////////////////////////////
+    
     tcp_pair *hej;
     return hej;
 }
