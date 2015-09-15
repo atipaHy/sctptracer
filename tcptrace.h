@@ -90,6 +90,7 @@ static char const GCC_UNUSED rcsid_tcptrace[] =
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include "sctp.h"
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netdb.h>
