@@ -1361,7 +1361,21 @@ dosctptrace(
     }
     
     ///////////////////////////////////////
+    /* idle-time stats */
+    if (!ZERO_TIME(&thisdir->last_time)) {
+	u_llong itime = elapsed(thisdir->last_time,current_time);
+	if (itime > thisdir->idle_max)
+	    thisdir->idle_max = itime;
+    }
+    thisdir->last_time = current_time;
     
+     /* calculate data length */
+    sctp_length = getpayloadlength(pip, plast);
+    sctp_data_length = sctp_length - (4 * TH_OFF(psctp));
+
+//    /* calc. data range */
+//    start = th_seq;
+//    end = start + sctp_data_length;
     tcp_pair *hej;
     return hej;
 }
@@ -1473,7 +1487,7 @@ dotrace(
 	++thisdir->fin_count;
 
     /* end bug fix */
-
+///////////////Jonas fixar nedåt////////////////////////////////////
 
     /* compute the "effective window", which is the advertised window */
     /* with scaling */
