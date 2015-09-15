@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="95">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="." name="0">
+      <df name="cygwin-includes">
+        <df name="linux">
+          <in>if_ether.h</in>
+        </df>
+        <df name="net">
+          <in>bpf.h</in>
+          <in>ethernet.h</in>
+          <in>if_arp.h</in>
+        </df>
+        <df name="netinet">
+          <in>if_ether.h</in>
+          <in>ip.h</in>
+          <in>tcp.h</in>
+          <in>udp.h</in>
+        </df>
+        <in>pcap.h</in>
+      </df>
+      <df name="cygwin-libs">
+        <df name="win9x">
+        </df>
+        <df name="winNT">
+        </df>
+      </df>
+      <df name="flex_bison">
+        <in>filt_parser.c</in>
+        <in>filt_parser.h</in>
+        <in>filt_scanner.c</in>
+      </df>
+      <df name="input">
+        <df name="bin">
+        </df>
+        <df name="OUTPUTbench">
+        </df>
+      </df>
+      <in>avl.c</in>
+      <in>compress.c</in>
+      <in>compress.h</in>
+      <in>config.h</in>
+      <in>dstring.c</in>
+      <in>dstring.h</in>
+      <in>dyncounter.c</in>
+      <in>dyncounter.h</in>
+      <in>erf.c</in>
+      <in>etherpeek.c</in>
+      <in>file_formats.h</in>
+      <in>filt_parser.c</in>
+      <in>filt_parser.h</in>
+      <in>filt_parser.y</in>
+      <in>filt_scanner.c</in>
+      <in>filt_scanner.l</in>
+      <in>filter.c</in>
+      <in>filter.h</in>
+      <in>filter_vars.h</in>
+      <in>gcache.c</in>
+      <in>gcache.h</in>
+      <in>ipv6.c</in>
+      <in>ipv6.h</in>
+      <in>mfiles.c</in>
+      <in>mod_collie.c</in>
+      <in>mod_collie.h</in>
+      <in>mod_http.c</in>
+      <in>mod_http.h</in>
+      <in>mod_inbounds.c</in>
+      <in>mod_inbounds.h</in>
+      <in>mod_realtime.c</in>
+      <in>mod_realtime.h</in>
+      <in>mod_rttgraph.c</in>
+      <in>mod_rttgraph.h</in>
+      <in>mod_slice.c</in>
+      <in>mod_slice.h</in>
+      <in>mod_tcplib.c</in>
+      <in>mod_tcplib.h</in>
+      <in>mod_traffic.c</in>
+      <in>mod_traffic.h</in>
+      <in>modules.h</in>
+      <in>names.c</in>
+      <in>netm.c</in>
+      <in>netscout.c</in>
+      <in>nlanr.c</in>
+      <in>ns.c</in>
+      <in>output.c</in>
+      <in>plotter.c</in>
+      <in>pool.c</in>
+      <in>pool.h</in>
+      <in>poolaccess.c</in>
+      <in>print.c</in>
+      <in>rexmit.c</in>
+      <in>snoop.c</in>
+      <in>snprintf_vms.c</in>
+      <in>tcpdump.c</in>
+      <in>tcpdump.h</in>
+      <in>tcptrace.c</in>
+      <in>tcptrace.h</in>
+      <in>thruput.c</in>
+      <in>trace.c</in>
+      <in>udp.c</in>
+      <in>version.c</in>
+      <in>version.h</in>
+      <in>versnum.c</in>
+    </df>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <developmentServer>localhost</developmentServer>
+        <platform>2</platform>
+      </toolsSet>
+      <compile>
+        <compiledirpicklist>
+          <compiledirpicklistitem>.</compiledirpicklistitem>
+          <compiledirpicklistitem>${AUTO_FOLDER}</compiledirpicklistitem>
+        </compiledirpicklist>
+        <compiledir>${AUTO_FOLDER}</compiledir>
+        <compilecommandpicklist>
+          <compilecommandpicklistitem>${MAKE} ${ITEM_NAME}.o</compilecommandpicklistitem>
+          <compilecommandpicklistitem>${AUTO_COMPILE}</compilecommandpicklistitem>
+        </compilecommandpicklist>
+        <compilecommand>${AUTO_COMPILE}</compilecommand>
+      </compile>
+      <dbx_gdbdebugger version="1">
+        <gdb_pathmaps>
+        </gdb_pathmaps>
+        <gdb_interceptlist>
+          <gdbinterceptoptions gdb_all="false" gdb_unhandled="true" gdb_unexpected="true"/>
+        </gdb_interceptlist>
+        <gdb_options>
+          <DebugOptions>
+          </DebugOptions>
+        </gdb_options>
+        <gdb_buildfirst gdb_buildfirst_overriden="false" gdb_buildfirst_old="false"/>
+      </dbx_gdbdebugger>
+      <nativedebugger version="1">
+        <engine>gdb</engine>
+      </nativedebugger>
+      <runprofile version="9">
+        <runcommandpicklist>
+          <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
+        </runcommandpicklist>
+        <runcommand>"${OUTPUT_PATH}"</runcommand>
+        <rundir>.</rundir>
+        <buildfirst>false</buildfirst>
+        <terminal-type>0</terminal-type>
+        <remove-instrumentation>0</remove-instrumentation>
+        <environment>
+        </environment>
+      </runprofile>
+    </conf>
+  </confs>
+</configurationDescriptor>

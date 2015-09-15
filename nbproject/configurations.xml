@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="95">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="." name="0">
+      <in>avl.c</in>
+      <in>compress.c</in>
+      <in>dstring.c</in>
+      <in>dyncounter.c</in>
+      <in>erf.c</in>
+      <in>etherpeek.c</in>
+      <in>filt_parser.c</in>
+      <in>filt_scanner.c</in>
+      <in>filter.c</in>
+      <in>gcache.c</in>
+      <in>ipv6.c</in>
+      <in>mfiles.c</in>
+      <in>mod_collie.c</in>
+      <in>mod_http.c</in>
+      <in>mod_inbounds.c</in>
+      <in>mod_realtime.c</in>
+      <in>mod_rttgraph.c</in>
+      <in>mod_slice.c</in>
+      <in>mod_tcplib.c</in>
+      <in>mod_traffic.c</in>
+      <in>names.c</in>
+      <in>netm.c</in>
+      <in>netscout.c</in>
+      <in>nlanr.c</in>
+      <in>ns.c</in>
+      <in>output.c</in>
+      <in>plotter.c</in>
+      <in>pool.c</in>
+      <in>poolaccess.c</in>
+      <in>print.c</in>
+      <in>rexmit.c</in>
+      <in>snoop.c</in>
+      <in>tcpdump.c</in>
+      <in>tcptrace.c</in>
+      <in>thruput.c</in>
+      <in>trace.c</in>
+      <in>udp.c</in>
+      <in>version.c</in>
+      <in>versnum.c</in>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+      <itemPath>configure</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0" commonFlags="-O2"/>
+      </flagsDictionary>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+          <cTool>
+            <incDir>
+              <pElem>.</pElem>
+              <pElem>/usr/local/include</pElem>
+              <pElem>../pcap</pElem>
+              <pElem>/usr/include/pcap</pElem>
+            </incDir>
+            <preprocessorList>
+              <Elem>BUNZIP2="bunzip2"</Elem>
+              <Elem>GROK_ERF</Elem>
+              <Elem>GROK_ETHERPEEK</Elem>
+              <Elem>GROK_NETM</Elem>
+              <Elem>GROK_NETSCOUT</Elem>
+              <Elem>GROK_NS</Elem>
+              <Elem>GROK_SNOOP</Elem>
+              <Elem>GROK_TCPDUMP</Elem>
+              <Elem>GUNZIP="gunzip"</Elem>
+              <Elem>HAVE_INET_PTON=1</Elem>
+              <Elem>HAVE_INTTYPES_H=1</Elem>
+              <Elem>HAVE_LIBM=1</Elem>
+              <Elem>HAVE_MEMALIGN=1</Elem>
+              <Elem>HAVE_MEMORY_H=1</Elem>
+              <Elem>HAVE_MKSTEMP=1</Elem>
+              <Elem>HAVE_STDINT_H=1</Elem>
+              <Elem>HAVE_STDLIB_H=1</Elem>
+              <Elem>HAVE_STRINGS_H=1</Elem>
+              <Elem>HAVE_STRING_H=1</Elem>
+              <Elem>HAVE_SYS_STAT_H=1</Elem>
+              <Elem>HAVE_SYS_TYPES_H=1</Elem>
+              <Elem>HAVE_UNISTD_H=1</Elem>
+              <Elem>HAVE_VALLOC=1</Elem>
+              <Elem>HTTP_DUMP_TIMES</Elem>
+              <Elem>HTTP_SAFE</Elem>
+              <Elem>LOAD_MODULE_COLLIE</Elem>
+              <Elem>LOAD_MODULE_HTTP</Elem>
+              <Elem>LOAD_MODULE_REALTIME</Elem>
+              <Elem>LOAD_MODULE_RTTGRAPH</Elem>
+              <Elem>LOAD_MODULE_SLICE</Elem>
+              <Elem>LOAD_MODULE_TRAFFIC</Elem>
+              <Elem>SIZEOF_UNSIGNED_INT=4</Elem>
+              <Elem>SIZEOF_UNSIGNED_LONG_INT=4</Elem>
+              <Elem>SIZEOF_UNSIGNED_LONG_LONG_INT=8</Elem>
+              <Elem>SIZEOF_UNSIGNED_SHORT=2</Elem>
+              <Elem>STDC_HEADERS=1</Elem>
+              <Elem>USE_LLU=1</Elem>
+            </preprocessorList>
+          </cTool>
+        </makeTool>
+      </makefileType>
+      <item path="avl.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="compress.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="dstring.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="dyncounter.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="erf.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="etherpeek.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="filt_parser.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="filt_scanner.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="filter.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="gcache.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="ipv6.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mfiles.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_collie.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_http.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_inbounds.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_realtime.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_rttgraph.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_slice.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_tcplib.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mod_traffic.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="names.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="netm.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="netscout.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="nlanr.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="ns.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="output.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="plotter.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pool.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="poolaccess.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="print.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="rexmit.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="snoop.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="tcpdump.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="tcptrace.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="thruput.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="trace.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="udp.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="version.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+          <preprocessorList>
+            <Elem>BUILT_DATE="tis 15 sep 2015 09:37:52 CEST"</Elem>
+            <Elem>BUILT_HOST="sctp-VirtualBox"</Elem>
+            <Elem>BUILT_USER="sctp"</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="versnum.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>
