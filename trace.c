@@ -1438,7 +1438,7 @@ dosctptrace(
     
      /* calculate data length */
     sctp_length = getpayloadlength(pip, plast);
-    sctp_data_length = sctp_length - (4 * TH_OFF(psctp));
+    sctp_data_length = sctp_length - 12; //inte säker 32 bitar +32 +32 = 12 bytes
 
 //    /* calc. data range */
 //    start = th_seq;
