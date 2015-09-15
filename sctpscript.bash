@@ -7,6 +7,7 @@ wait
 #Niklas ändring
 #Jonas ändring
 #Henrik ändring2
+#Christos ändring
 ./configure
 wait
 make
