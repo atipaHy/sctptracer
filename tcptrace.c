@@ -842,6 +842,7 @@ ProcessFile(
     int ret;
     struct ip *pip;
     struct tcphdr *ptcp;
+    struct sctphdr *psctp;
     int phystype;
     void *phys;  /* physical transport header */
     tcp_pair *ptp;
@@ -1114,8 +1115,12 @@ for other packet types, I just don't have a place to test them\n\n");
 	}
 		       
 	/* find the start of the TCP header */
-	ret = gettcp (pip, &ptcp, &plast);
-
+        Bool SCTP;
+	ret = getsctp (pip, &psctp, &plast);
+        if(ret < 0)
+            ret = gettcp (pip, &ptcp, &plast);
+        else
+            SCTP = TRUE;
 	/* if that failed, it's not TCP */
 	if (ret < 0) {
 	    udp_pair *pup;
@@ -1154,7 +1159,7 @@ for other packet types, I just don't have a place to test them\n\n");
         }
 
 	/* verify TCP checksums, if requested */
-	if (verify_checksums) {
+	if (verify_checksums && !SCTP) {
 	    if (!tcp_cksum_valid(pip,ptcp,plast)) {
 		++bad_tcp_checksums;
 		if (warn_printbadcsum) 
@@ -1164,7 +1169,10 @@ for other packet types, I just don't have a place to test them\n\n");
 	}
 		       
         /* perform TCP packet analysis */
-	ptp = dotrace(pip,ptcp,plast);
+        if(SCTP)
+            ptp = dosctptrace(pip,psctp,plast);
+	else
+            ptp = dotrace(pip,ptcp,plast);
 
 	/* if it wasn't "interesting", we return NULL here */
 	if (ptp == NULL)

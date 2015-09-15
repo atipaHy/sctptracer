@@ -307,6 +307,15 @@ gettcp(
     return (ret_val);
 }
 
+int
+getsctp(
+    struct ip *pip,
+    struct sctphdr **ppsctp,
+    void **pplast)
+{
+    int ret_val = findheader(IPPROTO_SCTP, pip, (void **)ppsctp, pplast);
+    return (ret_val);
+}
 
 /*
  * getudp:  return a pointer to a udp header.

@@ -1344,7 +1344,24 @@ RemoveTcpPair(
   FreeTcpPair(ptp);
 }
 
-
+tcp_pair *
+dosctptrace(
+    struct ip *pip,
+    struct sctphdr *psctp,
+    void *plast)
+{
+    /* make sure we have enough of the packet */
+    if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
+	if (warn_printtrunc)
+	    fprintf(stderr,
+		    "SCTP packet %lu truncated too short to trace, ignored\n",
+		    pnum);
+	++ctrunc;
+	return(NULL);
+    }
+    tcp_pair *hej;
+    return hej;
+}
 
 tcp_pair *
 dotrace(
