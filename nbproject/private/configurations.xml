@@ -19,12 +19,6 @@
         </df>
         <in>pcap.h</in>
       </df>
-      <df name="cygwin-libs">
-        <df name="win9x">
-        </df>
-        <df name="winNT">
-        </df>
-      </df>
       <df name="flex_bison">
         <in>filt_parser.c</in>
         <in>filt_parser.h</in>
@@ -89,6 +83,7 @@
       <in>poolaccess.c</in>
       <in>print.c</in>
       <in>rexmit.c</in>
+      <in>sctp.h</in>
       <in>snoop.c</in>
       <in>snprintf_vms.c</in>
       <in>tcpdump.c</in>

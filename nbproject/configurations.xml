@@ -273,13 +273,13 @@
       <item path="version.c" ex="false" tool="0" flavor2="0">
         <cTool flags="0">
           <preprocessorList>
-            <Elem>BUILT_DATE="tis 15 sep 2015 09:37:52 CEST"</Elem>
-            <Elem>BUILT_HOST="sctp-VirtualBox"</Elem>
-            <Elem>BUILT_USER="sctp"</Elem>
+            <Elem>BUILT_DATE="Tue Sep 15 12:26:17 CEST 2015"</Elem>
+            <Elem>BUILT_HOST="ubuntu"</Elem>
+            <Elem>BUILT_USER="henk"</Elem>
           </preprocessorList>
         </cTool>
       </item>
-      <item path="versnum.c" ex="false" tool="0" flavor2="0">
+      <item path="versnum.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
