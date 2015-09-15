@@ -1358,10 +1358,13 @@ dosctptrace(
     short	ip_len;		/* total length */
     tcb		*thisdir;
     tcb		*otherdir;
+    int		dir;
     int		sctp_length;
     int		sctp_data_length;
     u_long	start;
     u_long	end;
+    ptp_ptr	*sctp_ptr = NULL;
+    
     /* make sure we have enough of the packet */
     if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
 	if (warn_printtrunc)
@@ -1382,7 +1385,7 @@ dosctptrace(
     ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
 
     /* make sure this is one of the connections we want */
-   // ptp_save = FindTTP(pip,ptcp,&dir, &tcp_ptr);
+   ptp_save = FindTTP(pip,psctp,&dir, &sctp_ptr);
 
     ++tcp_packet_count;
 
