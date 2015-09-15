@@ -1359,6 +1359,9 @@ dosctptrace(
 	++ctrunc;
 	return(NULL);
     }
+    
+    ///////////////////////////////////////
+    
     tcp_pair *hej;
     return hej;
 }
