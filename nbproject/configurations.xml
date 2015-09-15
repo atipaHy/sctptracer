@@ -122,11 +122,11 @@
           </cTool>
         </makeTool>
       </makefileType>
-      <item path="avl.c" ex="false" tool="0" flavor2="0">
+      <item path="avl.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="compress.c" ex="false" tool="0" flavor2="0">
+      <item path="compress.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -138,11 +138,11 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="erf.c" ex="false" tool="0" flavor2="0">
+      <item path="erf.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="etherpeek.c" ex="false" tool="0" flavor2="0">
+      <item path="etherpeek.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -158,7 +158,7 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="gcache.c" ex="false" tool="0" flavor2="0">
+      <item path="gcache.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -166,7 +166,7 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="mfiles.c" ex="false" tool="0" flavor2="0">
+      <item path="mfiles.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -202,11 +202,11 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="names.c" ex="false" tool="0" flavor2="0">
+      <item path="names.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="netm.c" ex="false" tool="0" flavor2="0">
+      <item path="netm.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -214,7 +214,7 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="nlanr.c" ex="false" tool="0" flavor2="0">
+      <item path="nlanr.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -222,11 +222,11 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="output.c" ex="false" tool="0" flavor2="0">
+      <item path="output.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="plotter.c" ex="false" tool="0" flavor2="0">
+      <item path="plotter.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -238,27 +238,27 @@
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="print.c" ex="false" tool="0" flavor2="0">
+      <item path="print.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="rexmit.c" ex="false" tool="0" flavor2="0">
+      <item path="rexmit.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="snoop.c" ex="false" tool="0" flavor2="0">
+      <item path="snoop.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="tcpdump.c" ex="false" tool="0" flavor2="0">
+      <item path="tcpdump.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="tcptrace.c" ex="false" tool="0" flavor2="0">
+      <item path="tcptrace.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
-      <item path="thruput.c" ex="false" tool="0" flavor2="0">
+      <item path="thruput.c" ex="false" tool="0" flavor2="2">
         <cTool flags="0">
         </cTool>
       </item>
@@ -273,7 +273,7 @@
       <item path="version.c" ex="false" tool="0" flavor2="0">
         <cTool flags="0">
           <preprocessorList>
-            <Elem>BUILT_DATE="Tue Sep 15 12:26:17 CEST 2015"</Elem>
+            <Elem>BUILT_DATE="Tue Sep 15 15:05:56 CEST 2015"</Elem>
             <Elem>BUILT_HOST="ubuntu"</Elem>
             <Elem>BUILT_USER="henk"</Elem>
           </preprocessorList>
