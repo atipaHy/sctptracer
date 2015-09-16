@@ -139,11 +139,10 @@ struct sctphdr
 struct chunkhdr
 {
     u_int8_t th_chunktype;          /* first chunk type */
-#define TH_INIT == 1;
-    
     u_int8_t th_chunkflags;         /* chunkflags */
     u_int16_t th_chunklength;       /* chunklength */
 };
+
 //
 //enum
 //{

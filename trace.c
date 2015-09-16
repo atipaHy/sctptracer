@@ -1865,7 +1865,6 @@ dosctptrace(
 	return(NULL);
     }
     
-    
     /* convert interesting fields to local byte order */
     th_vertag   = ntohl(psctp->th_vertag);
     th_chksum   = ntohl(psctp->th_chksum);
@@ -1876,6 +1875,7 @@ dosctptrace(
     //th_urp   = ntohs(psctp->th_urp);
     ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
 
+   
     /* make sure this is one of the connections we want */
     ptp_save = FindTTPsctp(pip,psctp,&dir, &sctp_ptr);
 
