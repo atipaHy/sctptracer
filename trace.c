@@ -63,7 +63,7 @@ static char const GCC_UNUSED rcsid[] =
 
 
 /* locally global variables */
-static int tcp_packet_count = 0;
+static int sctp_packet_count = 0;
 static int search_count = 0;
 static int active_conn_count = 0;
 static int closed_conn_count = 0;
@@ -80,7 +80,7 @@ static int tline_right = 0;
 int num_tcp_pairs = -1;	/* how many pairs we've allocated */
 tcp_pair **ttp = NULL;	/* array of pointers to allocated pairs */
 int max_tcp_pairs = 64; /* initial value, automatically increases */
-u_long tcp_trace_count = 0;
+u_long sctp_trace_count = 0;
 
 
 /* local routine definitions */
@@ -1877,15 +1877,15 @@ dosctptrace(
     ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
 
     /* make sure this is one of the connections we want */
-   ptp_save = FindTTPsctp(pip,psctp,&dir, &sctp_ptr);
+    ptp_save = FindTTPsctp(pip,psctp,&dir, &sctp_ptr);
 
-    ++tcp_packet_count;
+    ++sctp_packet_count;
 
     if (ptp_save == NULL) {
 	return(NULL);
     }
 
-    ++tcp_trace_count;
+    ++sctp_trace_count;
 
     if (run_continuously && (sctp_ptr == NULL)) {
       fprintf(stderr, "Did not initialize sctp pair pointer\n");
@@ -2005,13 +2005,13 @@ dotrace(
     /* make sure this is one of the connections we want */
     ptp_save = FindTTP(pip,ptcp,&dir, &tcp_ptr);
 
-    ++tcp_packet_count;
+    ++sctp_packet_count;
 
     if (ptp_save == NULL) {
 	return(NULL);
     }
 
-    ++tcp_trace_count;
+    ++sctp_trace_count;
 
     if (run_continuously && (tcp_ptr == NULL)) {
       fprintf(stderr, "Did not initialize tcp pair pointer\n");
@@ -3081,7 +3081,7 @@ trace_done(void)
   
   if (!run_continuously) {
     if (!printsuppress) {
-	if (tcp_trace_count == 0) {
+	if (sctp_trace_count == 0) {
 	    fprintf(stdout,"%sno traced TCP packets\n", comment);
 	    return;
 	} else {
@@ -3112,10 +3112,10 @@ trace_done(void)
 	int max_depth = 0;
 	int max_comparisons = 0;
 	float max_searches_compare = 0.0;
-	fprintf(stdout,"%sTotal searches: %u\n", comment, tcp_packet_count);
+	fprintf(stdout,"%sTotal searches: %u\n", comment, sctp_packet_count);
 	fprintf(stdout,"%s  Total comparisons: %u\n", comment, search_count);
 	fprintf(stdout,"%s  Average compares/search: %.2f\n",
-		comment, (float)search_count / (float)tcp_packet_count);
+		comment, (float)search_count / (float)sctp_packet_count);
 	fprintf(stdout,"%sHash table size: %u\n", comment, HASH_TABLE_SIZE);
 	for (h=0; h < HASH_TABLE_SIZE; ++h) {
 	    struct search_efficiency *pse = &hashtable_efficiency[h];

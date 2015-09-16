@@ -338,7 +338,7 @@ udptrace_done(void)
 			fprintf(stdout,"no traced UDP packets\n");
 			return;
 		   } else {
-			if ((tcp_trace_count > 0) && (!printbrief))
+			if ((sctp_trace_count > 0) && (!printbrief))
 			     printf("\n============================================================\n");
 			fprintf(stdout,"UDP connection info:\n");
 		   }

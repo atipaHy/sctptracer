@@ -794,7 +794,7 @@ main(
 
     /* general output */
     fprintf(stdout, "%s%lu packets seen, %lu TCP packets traced",
-	    comment, pnum, tcp_trace_count);
+	    comment, pnum, sctp_trace_count);
     if (do_udp)
 	fprintf(stdout,", %lu UDP packets traced", udp_trace_count);
     fprintf(stdout,"\n");

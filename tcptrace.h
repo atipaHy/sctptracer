@@ -261,7 +261,7 @@ extern timeval first_packet;
 extern timeval last_packet;
 
 /* counters */
-extern u_long tcp_trace_count;
+extern u_long sctp_trace_count;
 extern u_long udp_trace_count;
 
 typedef struct segment {
@@ -927,7 +927,22 @@ char *ExpandFormat(const char *format);
 #define FLAG7_SET(ptcp)((ptcp)->th_flags & 0x80)
 
 /* SCTP flags macros */
-#define INIT_SET(psctp)((psctp)->th_chunktype == 1)
+#define DATA_SET(pchunk)((pchunk)->th_chunktype == 0)
+#define INIT_SET(pchunk)((pchunk)->th_chunktype == 1)
+#define INITACK_SET(pchunk)((pchunk)->th_chunktype == 2)
+#define SACK_SET(pchunk)((pchunk)->th_chunktype == 3)
+#define HB_SET(pchunk)((pchunk)->th_chunktype == 4)
+#define HBACK_SET(pchunk)((pchunk)->th_chunktype == 5)
+#define ABORT_SET(pchunk)((pchunk)->th_chunktype == 6)
+#define SD_SET(pchunk)((pchunk)->th_chunktype == 7)
+#define SDACK_SET(pchunk)((pchunk)->th_chunktype == 8)
+#define ERR_SET(pchunk)((pchunk)->th_chunktype == 9)
+#define COOKECHO_SET(pchunk)((pchunk)->th_chunktype == 10)
+#define COOKACK_SET(pchunk)((pchunk)->th_chunktype == 11)
+#define ECNE_SET(pchunk)((pchunk)->th_chunktype == 12)
+#define CWRSCTP_SET(pchunk)((pchunk)->th_chunktype == 13)
+#define SDCOMP_SET(pchunk)((pchunk)->th_chunktype == 14)
+
 
 /* Changed the following macros to reflect the correct position
 of bits as specified in RFC 2481 and draft-ietf-tsvwg-ecn-04.txt */
