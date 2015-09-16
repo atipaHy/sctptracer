@@ -273,7 +273,7 @@
       <item path="version.c" ex="false" tool="0" flavor2="0">
         <cTool flags="0">
           <preprocessorList>
-            <Elem>BUILT_DATE="Wed Sep 16 09:51:32 CEST 2015"</Elem>
+            <Elem>BUILT_DATE="Wed Sep 16 10:31:18 CEST 2015"</Elem>
             <Elem>BUILT_HOST="ubuntu"</Elem>
             <Elem>BUILT_USER="henk"</Elem>
           </preprocessorList>
