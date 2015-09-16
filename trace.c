@@ -1833,6 +1833,39 @@ RemoveTcpPair(
   FreeTcpPair(ptp);
 }
 
+void 
+chunktrace(
+    struct sctphdr *psctp,
+    int payload_length)
+{
+    chunkhdr *chunk = psctp + 12;
+    void *eopacket = psctp + payload_length;
+    int data = 0,init = 0, init_ack = 0, heart_beat = 0, heart_beat_ack = 0,
+        abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
+        cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
+    
+    while(chunk < eopacket)
+    {
+//     
+//       if(){data++;};
+//       else if(){init++;};
+//       else if(){init_ack++;};
+//       else if(){heart_beat++;};
+//       else if(){heart_beat_ack++;};
+//       else if(){abort++;};
+//       else if(){shutdown++;};
+//       else if(){shutdown_ack++;};
+//       else if(){error++;};
+//       else if(){cookie_echo++;};
+//       else if(){cookie_ack++;};
+//       else if(){ecne++;};
+//       else if(){cwr++;};
+//       else if(){shutdown_complete++;};
+//       else if(){auth++;};
+//       else {}
+    }
+}
+
 tcp_pair *
 dosctptrace(
     struct ip *pip,
@@ -1938,6 +1971,9 @@ dosctptrace(
 //    /* calc. data range */
 //    start = th_seq;
 //    end = start + sctp_data_length;
+    
+    chunktrace(psctp, sctp_length);
+    
     tcp_pair *hej;
     return hej;
 }
