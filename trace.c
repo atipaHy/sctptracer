@@ -1838,7 +1838,7 @@ chunktrace(
     struct sctphdr *psctp,
     int payload_length)
 {
-    struct chunkhdr *pchunk;
+    chunkhdr *pchunk;
     void *tmp;
     tmp = psctp;
     pchunk = tmp + 12;
