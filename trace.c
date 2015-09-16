@@ -1850,7 +1850,7 @@ chunktrace(
        if(DATA_SET(pchunk)){data++;}
        else if(INIT_SET(pchunk)){init++;}
        else if(INITACK_SET(pchunk)){init_ack++;}
-       else if(SACK_SET){sack++;}
+       else if(SACK_SET(pchunk)){sack++;}
        else if(HB_SET(pchunk)){heart_beat++;}
        else if(HBACK_SET(pchunk)){heart_beat_ack++;}
        else if(ABORT_SET(pchunk)){abort++;}
