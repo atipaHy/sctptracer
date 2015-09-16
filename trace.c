@@ -1871,7 +1871,7 @@ dosctptrace(
     th_chksum   = ntohl(psctp->th_chksum);
     th_sport = ntohs(psctp->th_sport);
     th_dport = ntohs(psctp->th_dport);
-    th_ctype = ntohs(psctp->th_chunktype);
+    //th_ctype = ntohs(psctp->th_chunktype);
     //th_win   = ntohs(psctp->th_win);
     //th_urp   = ntohs(psctp->th_urp);
     ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
