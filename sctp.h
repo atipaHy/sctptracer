@@ -129,11 +129,18 @@ struct sctphdr
 # else
 #  error "Adjust your <bits/endian.h> defines"
 # endif
-	u_int16_t window;
-	u_int16_t check;
-	u_int16_t urg_ptr;
+//	u_int16_t window;
+//	u_int16_t check;
+//	u_int16_t urg_ptr;
       };
     };
+};
+
+struct chunkhdr
+{
+    u_int8_t th_chunktype;          /* first chunk type */
+    u_int8_t th_chunkflags;         /* chunkflags */
+    u_int16_t th_chunklength;       /* chunklength */
 };
 //
 //enum

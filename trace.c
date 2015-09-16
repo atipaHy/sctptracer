@@ -1844,6 +1844,7 @@ dosctptrace(
     u_short	th_dport;	/* destination port */
     tcp_seq	th_vertag;	/* verification tag */
     tcp_seq	th_chksum;	/* checksum */
+    u_int8_t    th_ctype;       /*chunk type*/     
     short	ip_len;		/* total length */
     tcb		*thisdir;
     tcb		*otherdir;
@@ -1864,11 +1865,13 @@ dosctptrace(
 	return(NULL);
     }
     
+    
     /* convert interesting fields to local byte order */
     th_vertag   = ntohl(psctp->th_vertag);
     th_chksum   = ntohl(psctp->th_chksum);
     th_sport = ntohs(psctp->th_sport);
     th_dport = ntohs(psctp->th_dport);
+    th_ctype = ntohs(psctp->th_chunktype);
     //th_win   = ntohs(psctp->th_win);
     //th_urp   = ntohs(psctp->th_urp);
     ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);

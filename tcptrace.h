@@ -926,6 +926,9 @@ char *ExpandFormat(const char *format);
 #define FLAG6_SET(ptcp)((ptcp)->th_flags & 0x40)
 #define FLAG7_SET(ptcp)((ptcp)->th_flags & 0x80)
 
+/* SCTP flags macros */
+#define INIT_SET(psctp)((psctp)->th_chunktype == 1)
+
 /* Changed the following macros to reflect the correct position
 of bits as specified in RFC 2481 and draft-ietf-tsvwg-ecn-04.txt */
 /*
