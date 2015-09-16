@@ -1838,31 +1838,32 @@ chunktrace(
     struct sctphdr *psctp,
     int payload_length)
 {
-    chunkhdr *chunk = psctp + 12;
+    chunkhdr *pchunk = psctp + 12;
     void *eopacket = psctp + payload_length;
-    int data = 0,init = 0, init_ack = 0, heart_beat = 0, heart_beat_ack = 0,
+    int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
         abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
         cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
     
-    while(chunk < eopacket)
+    while(pchunk < eopacket)
     {
-//     
-//       if(){data++;};
-//       else if(){init++;};
-//       else if(){init_ack++;};
-//       else if(){heart_beat++;};
-//       else if(){heart_beat_ack++;};
-//       else if(){abort++;};
-//       else if(){shutdown++;};
-//       else if(){shutdown_ack++;};
-//       else if(){error++;};
-//       else if(){cookie_echo++;};
-//       else if(){cookie_ack++;};
-//       else if(){ecne++;};
-//       else if(){cwr++;};
-//       else if(){shutdown_complete++;};
-//       else if(){auth++;};
-//       else {}
+     
+       if(DATA_SET(pchunk)){data++;}
+       else if(INIT_SET(pchunk)){init++;}
+       else if(INITACK_SET(pchunk)){init_ack++;}
+       else if(SACK_SET){sack++;}
+       else if(HB_SET(pchunk)){heart_beat++;}
+       else if(HBACK_SET(pchunk)){heart_beat_ack++;}
+       else if(ABORT_SET(pchunk)){abort++;}
+       else if(SD_SET(pchunk)){shutdown++;}
+       else if(SDACK_SET(pchunk)){shutdown_ack++;}
+       else if(ERR_SET(pchunk)){error++;}
+       else if(COOKECHO_SET(pchunk)){cookie_echo++;}
+       else if(COOKACK_SET(pchunk)){cookie_ack++;}
+       else if(ECNE_SET(pchunk)){ecne++;}
+       else if(CWR_SET(pchunk)){cwr++;}
+       else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
+       else if(AUTH_SET(pchunk)){auth++;}
+       else {}
     }
 }
 
