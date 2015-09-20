@@ -1840,16 +1840,17 @@ chunktrace(
 {
     chunkhdr *pchunk;
     
-    /* point to first chunkhdr*/
+    /* point to first chunkhdr */
     void *tmp;
     tmp = psctp;
-    pchunk = tmp + 12;
+    pchunk = tmp + 12;      //commonhdr always 12 bytes
     void *eopacket = tmp + payload_length;
     
     static int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
         abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
         cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
     
+    /* read all chunkhdrs within packet */
     while((int)pchunk < (int)eopacket)
     {
         /* count chunktypes */
@@ -1876,7 +1877,7 @@ chunktrace(
         while(chunklength%4!=0)
             chunklength++;
 
-        /* point to next chunkhdr or eop*/
+        /* point to next chunkhdr or eop */
         void* tmp2;
         tmp2 = pchunk;
         pchunk = tmp2 + chunklength;
