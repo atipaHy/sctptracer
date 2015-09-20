@@ -1839,39 +1839,52 @@ chunktrace(
     int payload_length)
 {
     chunkhdr *pchunk;
+    
+    /* point to first chunkhdr*/
     void *tmp;
     tmp = psctp;
     pchunk = tmp + 12;
-    void *eopacket = psctp + payload_length;
-    int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
+    void *eopacket = tmp + payload_length;
+    
+    static int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
         abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
         cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
-    printf("\n CHUNK TYPE!: %d\n", pchunk->th_chunktype);
+    
+    while((int)pchunk < (int)eopacket)
+    {
+        /* count chunktypes */
+       if(DATA_SET(pchunk)){data++;}
+       else if(INIT_SET(pchunk)){init++;}
+       else if(INITACK_SET(pchunk)){init_ack++;}
+       else if(SACK_SET(pchunk)){sack++;}
+       else if(HB_SET(pchunk)){heart_beat++;}
+       else if(HBACK_SET(pchunk)){heart_beat_ack++;}
+       else if(ABORT_SET(pchunk)){abort++;}
+       else if(SD_SET(pchunk)){shutdown++;}
+       else if(SDACK_SET(pchunk)){shutdown_ack++;}
+       else if(ERR_SET(pchunk)){error++;}
+       else if(COOKECHO_SET(pchunk)){cookie_echo++;}
+       else if(COOKACK_SET(pchunk)){cookie_ack++;}
+       else if(ECNE_SET(pchunk)){ecne++;}
+       else if(CWRSCTP_SET(pchunk)){cwr++;}
+       else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
+       else if(AUTH_SET(pchunk)){auth++;}
+       else {}
+       
+       /* chunklength with padding */
+       int chunklength = ntohs(pchunk->th_chunklength);
+       while(chunklength%4!=0)
+           chunklength++;
 
-    
-   
-    
-//    while(pchunk < eopacket)
-//    {
-//     
-//       if(DATA_SET(pchunk)){data++;}
-//       else if(INIT_SET(pchunk)){init++;}
-//       else if(INITACK_SET(pchunk)){init_ack++;}
-//       else if(SACK_SET(pchunk)){sack++;}
-//       else if(HB_SET(pchunk)){heart_beat++;}
-//       else if(HBACK_SET(pchunk)){heart_beat_ack++;}
-//       else if(ABORT_SET(pchunk)){abort++;}
-//       else if(SD_SET(pchunk)){shutdown++;}
-//       else if(SDACK_SET(pchunk)){shutdown_ack++;}
-//       else if(ERR_SET(pchunk)){error++;}
-//       else if(COOKECHO_SET(pchunk)){cookie_echo++;}
-//       else if(COOKACK_SET(pchunk)){cookie_ack++;}
-//       else if(ECNE_SET(pchunk)){ecne++;}
-//       else if(CWR_SET(pchunk)){cwr++;}
-//       else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
-//       else if(AUTH_SET(pchunk)){auth++;}
-//       else {}
-//    }
+       /* point to next chunkhdr or eop*/
+       void* tmp2;
+       tmp2 = pchunk;
+       pchunk = tmp2 + chunklength;
+       
+       /* potentially useful testprints */
+//       printf("\npchunk: %d, chunklength: %d cl: %d eop: %d", pchunk, ntohs(pchunk->th_chunklength), chunklength, (int)eopacket);
+//       printf("\n--------------------------------------------------------------------------------------------");
+    }
 }
 
 tcp_pair *
