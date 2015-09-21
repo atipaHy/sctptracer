@@ -1833,60 +1833,6 @@ RemoveTcpPair(
   FreeTcpPair(ptp);
 }
 
-void 
-chunktrace(
-    struct sctphdr *psctp,
-    int payload_length)
-{
-    chunkhdr *pchunk;
-    
-    /* point to first chunkhdr */
-    void *tmp;
-    tmp = psctp;
-    pchunk = tmp + 12;      //commonhdr always 12 bytes
-    void *eopacket = tmp + payload_length;
-    
-    static int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
-        abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
-        cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
-    
-    /* read all chunkhdrs within packet */
-    while((int)pchunk < (int)eopacket)
-    {
-        /* count chunktypes */
-        if(DATA_SET(pchunk)){data++;}
-        else if(INIT_SET(pchunk)){init++;}
-        else if(INITACK_SET(pchunk)){init_ack++;}
-        else if(SACK_SET(pchunk)){sack++;}
-        else if(HB_SET(pchunk)){heart_beat++;}
-        else if(HBACK_SET(pchunk)){heart_beat_ack++;}
-        else if(ABORT_SET(pchunk)){abort++;}
-        else if(SD_SET(pchunk)){shutdown++;}
-        else if(SDACK_SET(pchunk)){shutdown_ack++;}
-        else if(ERR_SET(pchunk)){error++;}
-        else if(COOKECHO_SET(pchunk)){cookie_echo++;}
-        else if(COOKACK_SET(pchunk)){cookie_ack++;}
-        else if(ECNE_SET(pchunk)){ecne++;}
-        else if(CWRSCTP_SET(pchunk)){cwr++;}
-        else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
-        else if(AUTH_SET(pchunk)){auth++;}
-        else {}
-
-        /* chunklength with padding */
-        int chunklength = ntohs(pchunk->th_chunklength);
-        while(chunklength%4!=0)
-            chunklength++;
-
-        /* point to next chunkhdr or eop */
-        void* tmp2;
-        tmp2 = pchunk;
-        pchunk = tmp2 + chunklength;
-
-        /* potentially useful testprints */
-//       printf("\npchunk: %d, chunklength: %d cl: %d eop: %d", pchunk, ntohs(pchunk->th_chunklength), chunklength, (int)eopacket);
-//       printf("\n--------------------------------------------------------------------------------------------");
-    }
-}
 
 tcp_pair *
 dosctptrace(
@@ -1908,6 +1854,8 @@ dosctptrace(
     int		sctp_data_length;
     u_long	start;
     u_long	end;
+    u_short	th_win;		/* window */
+    u_long	eff_win;	/* window after scaling */
     ptp_ptr	*sctp_ptr = NULL;
     
     /* make sure we have enough of the packet */
@@ -1968,23 +1916,6 @@ dosctptrace(
 	thisdir  = &ptp_save->b2a;
 	otherdir = &ptp_save->a2b;
     }
-
-//    /* meta connection stats */
-//    if (SYN_SET(ptcp))
-//	++thisdir->syn_count;
-//    if (RESET_SET(ptcp))
-//	++thisdir->reset_count;
-//    if (FIN_SET(ptcp))
-//	++thisdir->fin_count;
-//    
-    ///////////////////////////////////////
-    /* idle-time stats */
-    if (!ZERO_TIME(&thisdir->last_time)) {
-	u_llong itime = elapsed(thisdir->last_time,current_time);
-	if (itime > thisdir->idle_max)
-	    thisdir->idle_max = itime;
-    }
-    thisdir->last_time = current_time;
     
      /* calculate data length */
     sctp_length = getpayloadlength(pip, plast);
@@ -1994,7 +1925,101 @@ dosctptrace(
 //    start = th_seq;
 //    end = start + sctp_data_length;
     
-    chunktrace(psctp, sctp_length);
+    
+    
+    chunkhdr *pchunk;
+    
+    /* point to first chunkhdr */
+    void *tmp;
+    tmp = psctp;
+    pchunk = tmp + 12;      //commonhdr always 12 bytes
+    void *eopacket = tmp + sctp_length;
+    
+    static int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
+        abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
+        cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
+    
+    /* read all chunkhdrs within packet */
+    while((int)pchunk < (int)eopacket)
+    {
+        /* count chunktypes */
+        if(DATA_SET(pchunk)){data++;}
+        else if(INIT_SET(pchunk)){init++;}
+        else if(INITACK_SET(pchunk)){init_ack++;}
+        else if(SACK_SET(pchunk)){sack++;}
+        else if(HB_SET(pchunk)){heart_beat++;}
+        else if(HBACK_SET(pchunk)){heart_beat_ack++;}
+        else if(ABORT_SET(pchunk)){abort++;}
+        else if(SD_SET(pchunk)){shutdown++;}
+        else if(SDACK_SET(pchunk)){shutdown_ack++;}
+        else if(ERR_SET(pchunk)){error++;}
+        else if(COOKECHO_SET(pchunk)){cookie_echo++;}
+        else if(COOKACK_SET(pchunk)){cookie_ack++;}
+        else if(ECNE_SET(pchunk)){ecne++;}
+        else if(CWRSCTP_SET(pchunk)){cwr++;}
+        else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
+        else if(AUTH_SET(pchunk)){auth++;}
+        else {}
+
+        /* chunklength with padding */
+        int chunklength = ntohs(pchunk->th_chunklength);
+        while(chunklength%4!=0)
+            chunklength++;
+
+        
+        /* meta connection stats */
+        if (INIT_SET(pchunk))
+            ++thisdir->syn_count;
+        if (ABORT_SET(pchunk))
+            ++thisdir->reset_count;
+        if (SD_SET(pchunk))
+            ++thisdir->fin_count;
+
+        
+        /* idle-time stats */
+        if (!ZERO_TIME(&thisdir->last_time)) {
+	u_llong itime = elapsed(thisdir->last_time,current_time);
+	if (itime > thisdir->idle_max)
+	    thisdir->idle_max = itime;
+        }
+        thisdir->last_time = current_time;
+        
+        
+        /* compute the "effective window", which is the advertised window */
+        /* with scaling */
+        if (SACK_SET(sctp) || INIT_SET(sctp)) {
+            eff_win = (u_long) th_win;
+
+            /* N.B., the window_scale stored for the connection DURING 3way */
+            /* handshaking is the REQUESTED scale.  It's only valid if both */
+            /* sides request scaling.  AFTER we've seen both SYNs, that field */
+            /* is reset (above) to contain zero.  Note that if we */
+            /* DIDN'T see the SYNs, the windows will be off. */
+            /* Jamshid: Remember that the window is never scaled in SYN */
+            /* packets, as per RFC 1323. */
+            if (thisdir->f1323_ws && otherdir->f1323_ws && !SYN_SET(ptcp))
+                eff_win <<= thisdir->window_scale;
+        } else {
+            eff_win = 0;
+        }
+        
+        
+        
+        
+        /* point to next chunkhdr or eop */
+        void* tmp2;
+        tmp2 = pchunk;
+        pchunk = tmp2 + chunklength;
+
+        
+    }
+
+
+    ///////////////////////////////////////
+    
+    
+    
+    
     
     tcp_pair *hej;
     return hej;
