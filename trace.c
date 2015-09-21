@@ -1987,9 +1987,18 @@ dosctptrace(
         
         /* compute the "effective window", which is the advertised window */
         /* with scaling */
-        if (SACK_SET(sctp) || INIT_SET(sctp)) {
+        if (SACK_SET(pchunk) || INIT_SET(pchunk)) {
             eff_win = (u_long) th_win;
-
+            
+            int* pchunkinsa;
+            void* pchunktemp;
+            pchunktemp = pchunk;
+            pchunkinsa = pchunktemp + 8;
+            eff_win = ntohl(*pchunkinsa);
+            
+            //printf("%d \n" ,ntohl(*pchunkinsa));
+            
+            
             /* N.B., the window_scale stored for the connection DURING 3way */
             /* handshaking is the REQUESTED scale.  It's only valid if both */
             /* sides request scaling.  AFTER we've seen both SYNs, that field */
@@ -1997,8 +2006,8 @@ dosctptrace(
             /* DIDN'T see the SYNs, the windows will be off. */
             /* Jamshid: Remember that the window is never scaled in SYN */
             /* packets, as per RFC 1323. */
-            if (thisdir->f1323_ws && otherdir->f1323_ws && !SYN_SET(ptcp))
-                eff_win <<= thisdir->window_scale;
+            if (thisdir->f1323_ws && otherdir->f1323_ws && !INIT_SET(pchunk))
+              eff_win <<= thisdir->window_scale;
         } else {
             eff_win = 0;
         }
