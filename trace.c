@@ -1987,7 +1987,7 @@ dosctptrace(
         
         /* compute the "effective window", which is the advertised window */
         /* with scaling */
-        if (SACK_SET(sctp) || INIT_SET(sctp)) {
+        if (SACK_SET(pchunk) || INIT_SET(pchunk)) {
             eff_win = (u_long) th_win;
 
             /* N.B., the window_scale stored for the connection DURING 3way */
