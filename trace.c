@@ -1841,6 +1841,7 @@ dosctptrace(
     void *plast)
 {
     tcp_pair	*ptp_save;
+    tcp_pair	tp_in;
     u_short	th_sport;	/* source port */
     u_short	th_dport;	/* destination port */
     tcp_seq	th_vertag;	/* verification tag */
@@ -1856,6 +1857,7 @@ dosctptrace(
     u_long	end;
     u_short	th_win;		/* window */
     u_long	eff_win;	/* window after scaling */
+    seqnum	old_this_windowend; /* for graphing */
     ptp_ptr	*sctp_ptr = NULL;
     
     /* make sure we have enough of the packet */
@@ -2012,7 +2014,141 @@ dosctptrace(
             eff_win = 0;
         }
         
+        /* calc. data range */
+        /* tsn in sctp is counted per datachunk */
+        start = 0;
+        end = 0;
+        if(DATA_SET(pchunk))
+        {
+            int* ptmp;
+            void* ptmp2;
+            ptmp2 = pchunk;
+            ptmp = ptmp2 + 8;
+            start = ntohl(*ptmp);
+            end = start;
+        }
+
+        /* seq. space wrap around stats */
+        /* If all four quadrants have been visited and the current packet
+         * is in the same quadrant as the syn, check if latest seq. num is
+         * wrapping past the syn. If it is, increment wrap_count
+         */
+        if ((thisdir->quad1 && thisdir->quad2 && thisdir->quad3 && thisdir->quad4)) {
+            if ((IN_Q1(thisdir->syn) && (IN_Q1(end))) ||  (IN_Q2(thisdir->syn) && (IN_Q2(end))) || ((IN_Q3(thisdir->syn) && (IN_Q3(end))) || ((IN_Q4(thisdir->syn) && (IN_Q4(end)))))) {
+                if (end >= thisdir->syn) {
+                    if (debug>1)
+                        fprintf(stderr, "\nWARNING : sequence space wrapped around here \n");
+                    thisdir->seq_wrap_count++;
+                    thisdir->quad1=0;
+                    thisdir->quad2=0;
+                    thisdir->quad3=0;
+                    thisdir->quad4=0;
+                }
+            }
+        } 
+
+        /* Mark the visited quadrants */
+        if (!thisdir->quad1) {
+            if (IN_Q1(start) || IN_Q1(end))
+                thisdir->quad1=1;
+        } 
+        if (!thisdir->quad2) {
+            if (IN_Q2(start) || IN_Q2(end))
+                thisdir->quad2=1;
+        }
+        if (!thisdir->quad3) {
+            if (IN_Q3(start) || IN_Q3(end))
+                thisdir->quad3=1;
+        }
+        if (!thisdir->quad4) {
+            if (IN_Q4(start) || IN_Q4(end))
+                thisdir->quad4=1;
+        }
         
+        /* bugfix in case of retransmitted init? */
+        if (INIT_SET(pchunk)) {
+	/* error checking - better not change! */
+	if ((thisdir->syn_count > 1) && (thisdir->syn != start)) {
+	    /* it changed, that shouldn't happen! */
+	    if (warn_printbad_syn_fin_seq)
+		fprintf(stderr, "\
+                    %s->%s: rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
+			thisdir->host_letter,thisdir->ptwin->host_letter,
+			thisdir->syn, start,
+			(int)(elapsed(ptp_save->first_time,current_time)/1000000));
+	    thisdir->bad_behavior = TRUE;
+	}
+	thisdir->syn = start;
+	otherdir->ack = start;
+		/* bug fix for Rob Austein <sra@epilogue.com> */
+        
+         if (SD_SET(pchunk)) {
+            /* bug fix, if there's data here too, we need to bump up the FIN */
+            /* (psc data file shows example) */
+            u_long fin = start;
+            /* error checking - better not change! */
+            if ((thisdir->fin_count > 1) && (thisdir->fin != fin)) {
+                /* it changed, that shouldn't happen! */
+                if (warn_printbad_syn_fin_seq)
+                    fprintf(stderr, "\
+                %s->%s: rexmitted FIN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
+                            thisdir->host_letter,thisdir->ptwin->host_letter,
+                            thisdir->fin, fin,
+                            (int)(elapsed(ptp_save->first_time,current_time)/1000000));
+                thisdir->bad_behavior = TRUE;
+            }
+            thisdir->fin = fin;
+        }
+        
+        /* remember the OLD window end for graphing */
+        /* (bug fix - Thu Aug 12, 1999) */
+        old_this_windowend = thisdir->windowend;
+
+        if (SACK_SET(pchunk)) {
+            tt_uint32* ptmp;
+            void* ptmp2;
+            ptmp2 = pchunk;
+            ptmp = ptmp2 + 8;
+            thisdir->windowend = ntohl(*ptmp) + eff_win;
+        }
+        /* end bugfix */
+    
+        
+        /***********************************************************************/
+        /***********************************************************************/
+        /* if we're ignoring this connection, do no further processing	   */
+        /***********************************************************************/
+        /***********************************************************************/
+        if (ptp_save->ignore_pair) {
+            return(ptp_save);
+        }
+
+        /* save to a file if requested */
+        if (output_filename) {
+            PcapSavePacket(output_filename,pip,plast);
+        }
+
+        /* now, print it if requested */
+        if (printem && !printallofem) {
+            printf("Packet %lu\n", pnum);
+            printpacket(0,		/* original length not available */
+                        (char *)plast - (char *)pip + 1,
+                        NULL,0,	/* physical stuff not known here */
+                        pip,plast,thisdir);
+        }
+
+        /* grab the address from this packet */
+        CopyAddr(&tp_in.addr_pair, pip,
+                 th_sport, th_dport);
+
+
+        /* simple bookkeeping */
+        if (PIP_ISV6(pip)) {
+            ++thisdir->ipv6_segments;
+        }
+    
+    
+    }
         
         
         /* point to next chunkhdr or eop */
