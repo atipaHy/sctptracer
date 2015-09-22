@@ -218,6 +218,7 @@ printipv4(
 	(pip->ip_p == IPPROTO_ICMP)?"(ICMP)":
 	(pip->ip_p == IPPROTO_IGMP)?"(IGMP)":
 	(pip->ip_p == IPPROTO_EGP)?"(EGP)":
+        (pip->ip_p == IPPROTO_SCTP)?"(SCTP)":
 	"");
 
     printf("\t    HLEN: %d\n", IP_HL(pip)*4);
