@@ -2587,7 +2587,7 @@ dotrace(
 	thisdir->last_data_time = current_time;
     }
 
-    /* total packets stats */ /////////////////////////////////////////////////
+    /* total packets stats */ //////////////////////////////////////////////////
     ++ptp_save->packets;
     ++thisdir->packets;
 
