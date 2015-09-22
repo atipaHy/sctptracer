@@ -62,6 +62,8 @@ static char const GCC_UNUSED rcsid[] =
 #include "modules.h"
 #include "version.h"
 
+/*initializing global variable*/
+int global_sctp = 0;
 
 /* version information */
 char *tcptrace_version = VERSION;
@@ -1120,7 +1122,10 @@ for other packet types, I just don't have a place to test them\n\n");
         if(ret < 0)
             ret = gettcp (pip, &ptcp, &plast);
         else
+        {
             SCTP = TRUE;
+            global_sctp = 1;
+        }
 	/* if that failed, it's not TCP */
 	if (ret < 0) {
 	    udp_pair *pup;
