@@ -861,6 +861,7 @@ int Mfflush(MFILE *pmf);
 int Mfclose(MFILE *pmf);
 int Mfpipe(int pipes[2]);
 struct tcp_options *ParseOptions(struct tcphdr *ptcp, void *plast);
+struct tcp_options *ParseSctpOptions(struct sctphdr *psctp, void *plast);
 FILE *CompOpenHeader(char *filename);
 FILE *CompOpenFile(char *filename);
 void CompCloseFile(char *filename);

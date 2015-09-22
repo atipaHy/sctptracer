@@ -1840,6 +1840,10 @@ dosctptrace(
     struct sctphdr *psctp,
     void *plast)
 {
+    struct tcp_options *psctpo;
+    PLOTTER	to_tsgpl;
+    PLOTTER	from_tsgpl;
+    PLOTTER     tlinepl;
     tcp_pair	*ptp_save;
     tcp_pair	tp_in;
     u_short	th_sport;	/* source port */
@@ -2080,6 +2084,7 @@ dosctptrace(
 	}
 	thisdir->syn = start;
 	otherdir->ack = start;
+        }
 		/* bug fix for Rob Austein <sra@epilogue.com> */
         
          if (SD_SET(pchunk)) {
@@ -2146,10 +2151,38 @@ dosctptrace(
         if (PIP_ISV6(pip)) {
             ++thisdir->ipv6_segments;
         }
-    
-    
-    }
         
+        
+        /* plotter shorthand */
+        to_tsgpl     = otherdir->tsg_plotter;
+        from_tsgpl   = thisdir->tsg_plotter;
+
+        /* plotter shorthand (NOTE: we are using one plotter for both directions) */
+        tlinepl      = thisdir->tline_plotter;
+
+        /* check the options */
+        psctpo = ParseOptions(psctp,plast);
+        if (psctpo->mss != -1)
+            thisdir->mss = psctpo->mss;
+        if (psctpo->ws != -1) {
+            thisdir->window_scale = psctpo->ws;
+            thisdir->f1323_ws = TRUE;
+        }
+        if (psctpo->tsval != -1) {
+            thisdir->f1323_ts = TRUE;
+        }
+    
+        
+        if(SET_SACK(pchunk))
+        {
+            
+        }
+    
+        ////////////////CHRISTOS/////////////////////
+        
+        
+        
+        ////////////////////////////////////////////
         
         /* point to next chunkhdr or eop */
         void* tmp2;
@@ -3641,6 +3674,190 @@ get_short_opt(
     u_short s;
     memcpy(&s,ptr,sizeof(u_short));
     return(s);
+}
+
+struct tcp_options *
+ParseSctpOptions(
+    struct sctphdr *psctp,
+    void *plast)
+{
+    static struct tcp_options psctpo;
+    struct sack_block *psack;
+    u_char *pdata;
+    u_char *popt;
+    u_char *plen;
+
+//    popt  = (u_char *)psctp + sizeof(struct sctphdr);
+//    pdata = (u_char *)psctp + TH_OFF(psctp)*4;
+
+    /* init the options structure */
+    memset(&psctpo,0,sizeof(psctpo));
+    psctpo.mss = psctpo.ws = psctpo.tsval = psctpo.tsecr = -1;
+    psctpo.sack_req = 0;
+    psctpo.sack_count = -1;
+    psctpo.echo_req = psctpo.echo_repl = -1;
+    psctpo.cc = psctpo.ccnew = psctpo.ccecho = -1;
+//
+//    /* a quick sanity check, the unused (MBZ) bits must BZ! */
+//    if (warn_printbadmbz) {
+//	if (TH_X2(psctp) != 0) {
+//	    fprintf(stderr,
+//		    "TCP packet %lu: 4 reserved bits are not zero (0x%01x)\n",
+//		    pnum, TH_X2(psctp));
+//	}
+//	if ((psctp->th_flags & 0xc0) != 0) {
+//	    fprintf(stderr,
+//		    "TCP packet %lu: upper flag bits are not zero (0x%02x)\n",
+//		    pnum, psctp->th_flags);
+//	}
+//    } else {
+//	static int warned = 0;
+//	if (!warned &&
+//	    ((TH_X2(psctp) != 0) || ((psctp->th_flags & 0xc0) != 0))) {
+//	    warned = 1;
+//	    fprintf(stderr, "\
+//TCP packet %lu: reserved bits are not all zero.  \n\
+//\tFurther warnings disabled, use '-w' for more info\n",
+//		    pnum);
+//	}
+//    }
+//
+//    /* looks good, now check each option in turn */
+//    while (popt < pdata) {
+//	plen = popt+1;
+//
+//	/* check for truncation error */
+//	if ((char *)popt > (char *)plast) {
+//	    if (warn_printtrunc)
+//		fprintf(stderr,"\
+//ParseOptions: packet %lu too short to parse remaining options\n", pnum);
+//	    ++ctrunc;
+//	    break;
+//	}
+//
+//#define CHECK_O_LEN(opt) \
+//	if (*plen == 0) { \
+//	    if (warn_printtrunc) fprintf(stderr, "\
+//ParseOptions: packet %lu %s option has length 0, skipping other options\n", \
+//                                           pnum,opt); \
+//	    popt = pdata; break;} \
+//	if ((char *)popt + *plen - 1 > (char *)(plast)) { \
+//	    if (warn_printtrunc) \
+//		fprintf(stderr, "\
+//ParseOptions: packet %lu %s option truncated, skipping other options\n", \
+//              pnum,opt); \
+//	    ++ctrunc; \
+//	    popt = pdata; break;} \
+//
+//
+//	switch (*popt) {
+//	  case TCPOPT_EOL: ++popt; break;
+//	  case TCPOPT_NOP: ++popt; break;
+//	  case TCPOPT_MAXSEG:
+//	    CHECK_O_LEN("TCPOPT_MAXSEG");
+//	    psctpo.mss = ntohs(get_short_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_WS:
+//	    CHECK_O_LEN("TCPOPT_WS");
+//	    psctpo.ws = *((u_char *)(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_TS:
+//	    CHECK_O_LEN("TCPOPT_TS");
+//	    psctpo.tsval = ntohl(get_long_opt(popt+2));
+//	    psctpo.tsecr = ntohl(get_long_opt(popt+6));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_ECHO:
+//	    CHECK_O_LEN("TCPOPT_ECHO");
+//	    psctpo.echo_req = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_ECHOREPLY:
+//	    CHECK_O_LEN("TCPOPT_ECHOREPLY");
+//	    psctpo.echo_repl = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CC:
+//	    CHECK_O_LEN("TCPOPT_CC");
+//	    psctpo.cc = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CCNEW:
+//	    CHECK_O_LEN("TCPOPT_CCNEW");
+//	    psctpo.ccnew = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CCECHO:
+//	    CHECK_O_LEN("TCPOPT_CCECHO");
+//	    psctpo.ccecho = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_SACK_PERM:
+//	    CHECK_O_LEN("TCPOPT_SACK_PERM");
+//	    psctpo.sack_req = 1;
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_SACK:
+//	    /* see which bytes are acked */
+//	    CHECK_O_LEN("TCPOPT_SACK");
+//	    psctpo.sack_count = 0;
+//	    psack = (sack_block *)(popt+2);  /* past the kind and length */
+//	    popt += *plen;
+//	    while ((char *)psack < (char *)popt) {
+//		struct sack_block *psack_local =
+//		    &psctpo.sacks[(unsigned)psctpo.sack_count];
+//		/* warning, possible alignment problem here, so we'll
+//		   use memcpy() and hope for the best */
+//		/* better use -fno-builtin to avoid gcc alignment error
+//		   in GCC 2.7.2 */
+//		memcpy(psack_local, psack, sizeof(sack_block));
+//
+//		/* convert to local byte order (Jamshid Mahdavi) */
+//		psack_local->sack_left  = ntohl(psack_local->sack_left);
+//		psack_local->sack_right = ntohl(psack_local->sack_right);
+//
+//		++psack;
+//		if ((char *)psack > ((char *)plast+1)) {
+//		    /* this SACK block isn't all here */
+//		    if (warn_printtrunc)
+//			fprintf(stderr,
+//				"packet %lu: SACK block truncated\n",
+//				pnum);
+//		    ++ctrunc;
+//		    break;
+//		}
+//		++psctpo.sack_count;
+//		if (psctpo.sack_count > MAX_SACKS) {
+//		    /* this isn't supposed to be able to happen */
+//		    fprintf(stderr,
+//			    "Warning, internal error, too many sacks!!\n");
+//		    psctpo.sack_count = MAX_SACKS;
+//		}
+//	    }
+//	    break;
+//	  default:
+//	    if (debug)
+//		fprintf(stderr,
+//			"Warning, ignoring unknown TCP option 0x%x\n",
+//			*popt);
+//	    CHECK_O_LEN("TCPOPT_UNKNOWN");
+//
+//	    /* record it anyway... */
+//	    if (psctpo.unknown_count < MAX_UNKNOWN) {
+//		int ix = psctpo.unknown_count; /* make lint happy */
+//		psctpo.unknowns[ix].unkn_opt = *popt;
+//		psctpo.unknowns[ix].unkn_len = *plen;
+//	    }
+//	    ++psctpo.unknown_count;
+//	    
+//	    popt += *plen;
+//	    break;
+//	}
+//    }
+
+    return(&psctpo);
 }
 
 
