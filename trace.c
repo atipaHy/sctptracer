@@ -3319,7 +3319,10 @@ trace_done(void)
 		       fprintf(stdout,"TCP connection %d:\n", ix+1);
 		       
 		    }
-		    PrintTrace(ptp);
+                    if (global_sctp)
+                        SctpPrintTrace(ptp);
+                    if (!global_sctp)
+                        PrintTrace(ptp);
 		}
 	       /* This piece of code dumps PF file when filtered with '-c' 
 		  option, this option says to select only complete connections.
