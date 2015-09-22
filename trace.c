@@ -2197,7 +2197,7 @@ dosctptrace(
         ////////////////CHRISTOS/////////////////////
         /* NOW, unless BOTH sides asked for window scaling in their SYN	*/
         /* segments, we aren't using window scaling */
-        if (!INIT_SET(pstcp) &&
+        if (!INIT_SET(pchunk) &&
             ((!thisdir->f1323_ws) || (!otherdir->f1323_ws))) {
             thisdir->window_scale = otherdir->window_scale = 0;
         }
@@ -2211,32 +2211,24 @@ dosctptrace(
         }
         /* unless both sides advertised sack, we shouldn't see them, otherwise
            we hope they actually send them */
-            thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;
-        }    
+            thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    
     
         /* do data stats */
-        urg = FALSE;
-        if (tcp_data_length > 0) {
-            thisdir->data_pkts += 1;
-            if (PUSH_SET(ptcp))
-                thisdir->data_pkts_push += 1;
-            thisdir->data_bytes += tcp_data_length;
-            if (URGENT_SET(ptcp)) {     /* Checking if URGENT bit is set */
-                urg = TRUE; 
-                thisdir->urg_data_pkts += 1;
-                thisdir->urg_data_bytes += th_urp;
-            }
-            if (tcp_data_length > thisdir->max_seg_size)
+        //urg = FALSE;
+            if (DATA_SET(pchunk)) 
+                thisdir->data_pkts += 1;
+            //thisdir->data_bytes += tcp_data_length;
+            /*if (tcp_data_length > thisdir->max_seg_size)
                 thisdir->max_seg_size = tcp_data_length;
             if ((thisdir->min_seg_size == 0) ||
                 (tcp_data_length < thisdir->min_seg_size))
-                thisdir->min_seg_size = tcp_data_length;
+                thisdir->min_seg_size = tcp_data_length;*/
             /* record first and last times for data (Mallman) */
             if (ZERO_TIME(&thisdir->first_data_time))
                 thisdir->first_data_time = current_time;
             thisdir->last_data_time = current_time;
-        }
-
+            
+            
         ////////////////////////////////////////////
         
         /* point to next chunkhdr or eop */
