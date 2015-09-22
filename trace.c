@@ -2215,8 +2215,16 @@ dosctptrace(
     
         /* do data stats */
         //urg = FALSE;
-            if (DATA_SET(pchunk)) 
+            if (DATA_SET(pchunk)) {
                 thisdir->data_pkts += 1;
+
+                tt_uint16* chunklenghtt;  
+                void* tmp222;   
+                tmp222 = pchunk;
+                chunklenghtt = tmp222 + 2;
+                thisdir->data_bytes += ntohs(*chunklenghtt)-16;
+                
+                }
             //thisdir->data_bytes += tcp_data_length;
             /*if (tcp_data_length > thisdir->max_seg_size)
                 thisdir->max_seg_size = tcp_data_length;
