@@ -1994,7 +1994,6 @@ dosctptrace(
         /* compute the "effective window", which is the advertised window */
         /* with scaling */
         if (SACK_SET(pchunk) || INIT_SET(pchunk)) {
-            eff_win = (u_long) th_win;
             
             int* pchunkinsa;
             void* pchunktemp;
@@ -2161,7 +2160,7 @@ dosctptrace(
         tlinepl      = thisdir->tline_plotter;
 
         /* check the options */
-        psctpo = ParseOptions(psctp,plast);
+        psctpo = ParseSctpOptions(psctp,plast);
         if (psctpo->mss != -1)
             thisdir->mss = psctpo->mss;
         if (psctpo->ws != -1) {
@@ -2172,9 +2171,27 @@ dosctptrace(
             thisdir->f1323_ts = TRUE;
         }
         
-        if(SET_SACK(pchunk))
+        if(SACK_SET(pchunk))
         {
+            void* ptmp2;
+            tt_uint16 numgapblocks = 0;
+            tt_uint16 numduptsn = 0;
+            tt_uint32 tsnack = 0;
             
+            /* set tsn ack */
+            tt_uint32* ptofield;
+            ptmp2 = pchunk;
+            ptofield = ptmp2 + 4;
+            tsnack = ntohl(*ptofield);
+            
+            /* numgapblocks */
+            tt_uint16* ptofield2;
+            ptofield2 = ptmp2 + 12;
+            numgapblocks = ntohs(*ptofield2);
+            
+            /* num duplicate tsns */
+            ptofield2 = ptmp2 + 14;
+            numduptsn = ntohs(*ptofield2);
         }
     
         ////////////////CHRISTOS/////////////////////
