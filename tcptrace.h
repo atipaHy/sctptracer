@@ -553,6 +553,273 @@ typedef struct tcphdr tcphdr;
 typedef struct chunkhdr chunkhdr;
 
 
+typedef tcp_pair_addrblock sctp_pair_addrblock;
+
+struct sctp_pair {
+    /* are we ignoring this one?? */
+    Bool		ignore_pair;
+
+    /* inactive (previous instance of current connection */
+    Bool		inactive;
+
+    /* endpoint identification */
+    sctp_pair_addrblock	addr_pair;
+
+    /* connection naming information */
+    char		*a_hostname;
+    char		*b_hostname;
+    char		*a_portname;
+    char		*b_portname;
+    char		*a_endpoint;
+    char		*b_endpoint;
+
+    /* connection information */
+    timeval		first_time;
+    timeval		last_time;
+    u_llong		packets;
+    tcb			a2b;
+    tcb			b2a;
+
+
+    /* module-specific structures, if requested */
+    void		**pmod_info;
+
+    /* which file this connection is from */
+    char		*filename;
+};
+typedef struct sctp_pair sctp_pair;
+typedef struct chunkhdr chunkhdr;
+
+typedef struct scb {
+    /* parent pointer */
+    struct sctp_pair *ptp;
+    struct scb	*ptwin;
+    
+    /* SCTP information */
+    seqnum	init;
+    seqnum	init_ack;
+    seqnum	heartbeat;
+    seqnum	heartbeat_ack;
+    seqnum	shutdown;
+    seqnum	shutdown_ack;
+    seqnum	shutdown_complete;
+    seqnum	cookie_echo;
+    seqnum	cookie_ack;
+    seqnum	data;
+    seqnum	sack;
+    seqnum	abort;
+    seqnum	error;
+    seqnum	ecne;
+    seqnum	cwr;
+    
+    seqnum	seq;
+    seqnum	windowend;
+    timeval	time;
+
+    /* SCTP options */
+    u_int	mss;
+    Bool	f1323_ws;	/* did he request 1323 window scaling? */
+    Bool	f1323_ts;	/* did he request 1323 timestamps? */
+    Bool	fsack_req;	/* did he request SACKs? */
+    u_char	window_scale;
+
+	/* If we are using window scaling, have we adjusted the 
+	   win_min field from the non-scaled window size
+	   that appeared in the SYN packet?? */
+    Bool window_stats_updated_for_scaling;
+    u_llong     win_scaled_pkts; /* Used to calculate avg win adv */
+
+    /* statistics added */
+    u_llong	data_bytes;
+    u_llong	data_pkts;
+    u_llong     data_chunks;
+    u_llong	data_pkts_push;
+    u_llong	unique_bytes;	/* bytes sent (-FIN/SYN), excluding rexmits */
+    u_llong	rexmit_bytes;
+    u_llong	rexmit_pkts;
+    u_llong	ack_pkts;
+    u_llong	pureack_pkts;	/* mallman - pure acks, no data */
+    u_long	win_max;
+    u_long	win_min;
+    u_llong	win_tot;
+    u_long      win_last;  /* last advertised window size*/
+    u_long	win_zero_ct;
+    u_llong	packets;
+    u_char	init_count;
+    u_char	shutdown_count;
+    u_char	reset_count;  /* resets SENT */
+    u_long	min_seg_size;
+    u_long	max_seg_size;
+    u_llong	out_order_pkts;	/* out of order packets */
+    u_llong	sacks_sent;	/* sacks returned */
+    u_long	ipv6_segments;	/* how many segments were ipv6? */
+
+
+    /* stats on urgent data */
+    u_long     urg_data_bytes;
+    u_long     urg_data_pkts;
+   
+   /* Statistics to store the number of Zero window probes
+      seen and the total number of bytes spent for it. */
+    u_long      num_zwnd_probes;  
+    u_long      zwnd_probe_bytes;
+
+    /* stats on sequence numbers */
+
+    seqnum	min_seq;	/* smallest seq number seen */
+    seqnum	max_seq;	/* largest seq number seen */
+    seqnum	latest_seq;	/* most recent seq number seen */
+
+    /* stats on sequence space wrap arounds */
+    u_int quad1, quad2, quad3, quad4;  /* was every quadrant visited */
+    u_int seq_wrap_count;              /* wrap count */
+    
+    /* hardware duplicate detection */
+#define SEGS_TO_REMEMBER 8
+    struct str_hardware_dups2 {
+	seqnum	hwdup_seq;	/* sequence number */
+	u_short	hwdup_id;	/* IP ID */
+	u_long	hwdup_packnum; /* packet number */
+    } hardware_dups[SEGS_TO_REMEMBER];
+    u_long num_hardware_dups;
+    u_char hardware_dups_ix;
+
+    /* did I detect any "bad" sctp behavior? */
+    /* at present, this means: */
+    /*  - SYNs retransmitted with different sequence numbers */
+    /*  - FINs retransmitted with different sequence numbers */
+    Bool	bad_behavior;
+
+    /* added for initial window stats (for Mallman) */
+    u_long	initialwin_bytes;	/* initial window (in bytes) */
+    u_long	initialwin_segs;	/* initial window (in segments) */
+    Bool	data_acked;	/* has any non-SYN data been acked? */
+
+    /* added for (estimated) congestions window stats (for Mallman) */
+    u_long	owin_max;
+    u_long	owin_min;
+    u_llong	owin_tot;
+    u_llong	owin_wavg;  /* weighted owin */
+    u_llong     owin_count;
+    u_long	previous_owin_sample;
+    timeval     previous_owin_sample_time;
+
+    /* RTT stats for singly-transmitted segments */
+    double	rtt_last;	/* RTT as of last good ACK (microseconds) */
+    u_long	rtt_min;
+    u_long	rtt_max;
+    double	rtt_sum;	/* for averages */
+    double	rtt_sum2;	/* sum of squares, for stdev */
+    u_long	rtt_count;	/* for averages */
+    /* RTT stats for multiply-transmitted segments */
+    u_long	rtt_min_last;
+    u_long	rtt_max_last;
+    double	rtt_sum_last;	/* from last transmission, for averages */
+    double	rtt_sum2_last;	/* sum of squares, for stdev */
+    u_long	rtt_count_last;	/* from last transmission, for averages */
+
+	/* To keep track of stats for FULL SIZE segments
+	   Simple heuristic :
+	   We shall treat the largest packet, so far seen as the
+	   "full size" packet and collect stats. accordingly.
+	   Upon seeing a bigger packet, we flush all stats. collected
+	   incorrectly and begin all over again */
+	u_long rtt_full_size; 
+
+	u_long rtt_full_min;
+	u_long rtt_full_max;
+	double rtt_full_sum;	/* for averages */
+	double rtt_full_sum2;	/* sum of squares for stdev */
+	u_long rtt_full_count;	/* for averages */ 
+
+	u_long rtt_3WHS;		/* rtt value used to seed RTO timers */
+
+    /* ACK Counters */
+    u_llong	rtt_amback;	/* ambiguous ACK */
+    u_llong	rtt_cumack;	/* segments only cumulativly ACKed */
+    u_llong	rtt_nosample;	/* segments ACKED, but after retransmission */
+				/* of earlier segments, so sample isn't */
+				/* valid */
+    u_llong	rtt_unkack;	/* unknown ACKs  ??? */
+    u_llong	rtt_dupack;	/* duplicate ACKs */
+    u_llong	rtt_triple_dupack; /* triple duplicate ACKs */
+    /* retransmission information */
+    seqspace    *ss;		/* the sequence space*/
+    u_long	retr_max;	/* maximum retransmissions ct */
+    u_long	retr_min_tm;	/* minimum retransmissions time */
+    u_long	retr_max_tm;	/* maximum retransmissions time */
+    double	retr_tm_sum;	/* for averages */
+    double	retr_tm_sum2;	/* sum of squares, for stdev */
+    u_long	retr_tm_count;	/* for averages */
+
+    /* Instantaneous throughput info */
+    timeval	thru_firsttime;	/* time of first packet this interval */
+    u_long	thru_bytes;	/* number of bytes this interval */
+    u_long	thru_pkts;	/* number of packets this interval */
+    PLOTTER	thru_plotter;	/* throughput data dump file */
+    timeval	thru_lasttime;	/* time of previous segment */
+    PLINE	thru_avg_line;	/* average throughput line */
+    PLINE	thru_inst_line;	/* instantaneous throughput line */
+
+    /* data transfer time stamps - mallman */
+    timeval	first_data_time;
+    timeval	last_data_time;
+
+    /* Time Sequence Graph info for this one */
+    PLOTTER	tsg_plotter;
+    char	*tsg_plotfile;
+
+    /* Time Line Graph */
+    PLOTTER     tline_plotter;
+   
+    /* Dumped RTT samples */
+    MFILE	*rtt_dump_file;
+
+    /* Extracted stream contents */
+    MFILE	*extr_contents_file;
+    u_llong	trunc_bytes;	/* data bytes not see due to trace file truncation */
+    u_llong	trunc_segs;	/* segments with trunc'd bytes */
+    seqnum	extr_lastseq;	/* last sequence number we stored */
+    seqnum	extr_initseq;	/* initial sequence number (same as SYN unless we missed it) */
+
+    /* RTT Graph info for this one */
+    PLOTTER	rtt_plotter;
+    PLINE	rtt_line;
+
+    /* Segment size graph */
+    PLOTTER	segsize_plotter;
+    PLINE	segsize_line;
+    PLINE	segsize_avg_line;
+
+    /* Congestion window graph */
+    PLOTTER	owin_plotter;
+    PLINE	owin_line;
+    PLINE       rwin_line;
+    PLINE	owin_avg_line;
+    PLINE 	owin_wavg_line;
+
+    /* for tracking unidirectional idle time */
+    timeval	last_time;	/* last packet SENT from this side */
+    u_llong	idle_max;	/* maximum idle time observed (usecs) */
+
+    /* for looking for interesting SACK blocks */
+    u_long	num_sacks;
+    u_long	max_sack_blocks;
+    u_long	num_dsacks;
+
+    /* for computing LEAST (see FAQ) */
+    enum	sctp_strains { SCTP_RENO, SCTP_SACK, SCTP_DSACK } sctp_strain;
+    u_long	LEAST;
+    char	in_rto;
+    u_long	recovered, recovered_orig, rto_segment, lastackno;
+    u_long	event_retrans, event_dupacks;
+
+    /* host name letter(s) */
+    char	*host_letter;
+} scb;
+
+
+
 extern int num_tcp_pairs;	/* how many pairs are in use */
 extern tcp_pair **ttp;		/* array of pointers to allocated pairs */
 
