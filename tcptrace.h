@@ -110,6 +110,9 @@ static char const GCC_UNUSED rcsid_tcptrace[] =
 /* memory allocation routines */
 #include "pool.h"
 
+/*global variable to know what sort of packet*/
+extern int global_sctp;
+
 /* we want LONG LONG in some places */
 #if SIZEOF_UNSIGNED_LONG_LONG_INT >= 8
 #define HAVE_LONG_LONG
