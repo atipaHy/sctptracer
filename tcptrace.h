@@ -577,8 +577,8 @@ struct sctp_pair {
     timeval		first_time;
     timeval		last_time;
     u_llong		packets;
-    scb			a2b;
-    scb			b2a;
+    tcb			a2b;
+    tcb			b2a;
 
 
     /* module-specific structures, if requested */
@@ -645,10 +645,9 @@ typedef struct scb {
     u_long      win_last;  /* last advertised window size*/
     u_long	win_zero_ct;
     u_llong	packets;
-    u_llong     chunks;
     u_char	init_count;
     u_char	shutdown_count;
-    u_char	abort_count;  /* aborts SENT */
+    u_char	reset_count;  /* resets SENT */
     u_long	min_seg_size;
     u_long	max_seg_size;
     u_llong	out_order_pkts;	/* out of order packets */
