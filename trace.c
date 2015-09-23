@@ -1931,7 +1931,7 @@ dosctptrace(
 //    start = th_seq;
 //    end = start + sctp_data_length;
     
-    
+    ++thisdir->packets;
     
     chunkhdr *pchunk;
     
@@ -2206,8 +2206,9 @@ dosctptrace(
         if (psctpo->sack_req) {
             thisdir->fsack_req = 1;
         }
-        if (psctpo->sack_count > 0) {
-            ++thisdir->sacks_sent;
+  
+        if ((SACK_SET(pchunk))) {
+            ++thisdir->sack_count;
         }
         /* unless both sides advertised sack, we shouldn't see them, otherwise
            we hope they actually send them */
@@ -2215,23 +2216,18 @@ dosctptrace(
     
         /* do data stats */
         //urg = FALSE;
-            if (DATA_SET(pchunk)) {
-                thisdir->data_pkts += 1;
-
-                tt_uint16* chunklenghtt;  
-                void* tmp222;   
-                tmp222 = pchunk;
-                chunklenghtt = tmp222 + 2;
-                thisdir->data_bytes += ntohs(*chunklenghtt)-16;
-                
-                }
-            //thisdir->data_bytes += tcp_data_length;
-            /*if (tcp_data_length > thisdir->max_seg_size)
-                thisdir->max_seg_size = tcp_data_length;
-            if ((thisdir->min_seg_size == 0) ||
-                (tcp_data_length < thisdir->min_seg_size))
-                thisdir->min_seg_size = tcp_data_length;*/
-            /* record first and last times for data (Mallman) */
+        if (DATA_SET(pchunk)) {
+            tt_uint16* chunklenghtt;  
+            void* tmp222;   
+            tmp222 = pchunk;
+            chunklenghtt = tmp222 + 2;
+            
+            thisdir->data_pkts += 1;
+            
+            
+            
+            thisdir->data_bytes += ntohs(*chunklenghtt)-16;
+            }
             if (ZERO_TIME(&thisdir->first_data_time))
                 thisdir->first_data_time = current_time;
             thisdir->last_data_time = current_time;

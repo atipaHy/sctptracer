@@ -301,6 +301,11 @@ typedef struct tcb {
     seqnum	fin;
     seqnum	windowend;
     timeval	time;
+    
+    /* SCTP information */
+    seqnum      sack;
+    seqnum      init;
+    seqnum      shutdown;
 
     /* TCP options */
     u_int	mss;
@@ -315,6 +320,15 @@ typedef struct tcb {
     Bool window_stats_updated_for_scaling;
     u_llong     win_scaled_pkts; /* Used to calculate avg win adv */
 
+    
+    /* SCTP specifics */
+    u_llong     chunk_count;
+    u_llong     sack_count;
+    u_char	init_count;
+    u_char	shutdown_count;
+    u_char	abort_count;
+    
+    
     /* statistics added */
     u_llong	data_bytes;
     u_llong	data_pkts;
