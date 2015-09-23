@@ -1844,16 +1844,16 @@ dosctptrace(
     PLOTTER	to_tsgpl;
     PLOTTER	from_tsgpl;
     PLOTTER     tlinepl;
-    sctp_pair	*ptp_save;
-    sctp_pair	tp_in;
+    tcp_pair	*ptp_save;
+    tcp_pair	tp_in;
     u_short	th_sport;	/* source port */
     u_short	th_dport;	/* destination port */
     tcp_seq	th_vertag;	/* verification tag */
     tcp_seq	th_chksum;	/* checksum */
     u_int8_t    th_ctype;       /*chunk type*/     
     short	ip_len;		/* total length */
-    scb		*thisdir;
-    scb		*otherdir;
+    tcb		*thisdir;
+    tcb		*otherdir;
     int		dir;
     int		sctp_length;
     int		sctp_data_length;
@@ -1975,11 +1975,11 @@ dosctptrace(
         
         /* meta connection stats */
         if (INIT_SET(pchunk))
-            ++thisdir->init_count;
+            ++thisdir->syn_count;
         if (ABORT_SET(pchunk))
-            ++thisdir->abort_count;
+            ++thisdir->reset_count;
         if (SD_SET(pchunk))
-            ++thisdir->shutdown_count;
+            ++thisdir->fin_count;
 
         
         /* idle-time stats */
@@ -2037,8 +2037,8 @@ dosctptrace(
          * wrapping past the syn. If it is, increment wrap_count
          */
         if ((thisdir->quad1 && thisdir->quad2 && thisdir->quad3 && thisdir->quad4)) {
-            if ((IN_Q1(thisdir->init) && (IN_Q1(end))) ||  (IN_Q2(thisdir->init) && (IN_Q2(end))) || ((IN_Q3(thisdir->init) && (IN_Q3(end))) || ((IN_Q4(thisdir->init) && (IN_Q4(end)))))) {
-                if (end >= thisdir->init) {
+            if ((IN_Q1(thisdir->syn) && (IN_Q1(end))) ||  (IN_Q2(thisdir->syn) && (IN_Q2(end))) || ((IN_Q3(thisdir->syn) && (IN_Q3(end))) || ((IN_Q4(thisdir->syn) && (IN_Q4(end)))))) {
+                if (end >= thisdir->syn) {
                     if (debug>1)
                         fprintf(stderr, "\nWARNING : sequence space wrapped around here \n");
                     thisdir->seq_wrap_count++;
@@ -2071,18 +2071,18 @@ dosctptrace(
         /* bugfix in case of retransmitted init? */
         if (INIT_SET(pchunk)) {
 	/* error checking - better not change! */
-	if ((thisdir->init_count > 1) && (thisdir->init != start)) {
+	if ((thisdir->syn_count > 1) && (thisdir->syn != start)) {
 	    /* it changed, that shouldn't happen! */
 	    if (warn_printbad_syn_fin_seq)
 		fprintf(stderr, "\
                     %s->%s: rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
 			thisdir->host_letter,thisdir->ptwin->host_letter,
-			thisdir->init, start,
+			thisdir->syn, start,
 			(int)(elapsed(ptp_save->first_time,current_time)/1000000));
 	    thisdir->bad_behavior = TRUE;
 	}
-	thisdir->init = start;
-	otherdir->sack = start;
+	thisdir->syn = start;
+	otherdir->ack = start;
         }
 		/* bug fix for Rob Austein <sra@epilogue.com> */
         
@@ -2091,17 +2091,17 @@ dosctptrace(
             /* (psc data file shows example) */
             u_long fin = start;
             /* error checking - better not change! */
-            if ((thisdir->shutdown_count > 1) && (thisdir->shutdown != fin)) {
+            if ((thisdir->fin_count > 1) && (thisdir->fin != fin)) {
                 /* it changed, that shouldn't happen! */
                 if (warn_printbad_syn_fin_seq)
                     fprintf(stderr, "\
                 %s->%s: rexmitted FIN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
                             thisdir->host_letter,thisdir->ptwin->host_letter,
-                            thisdir->shutdown, fin,
+                            thisdir->fin, fin,
                             (int)(elapsed(ptp_save->first_time,current_time)/1000000));
                 thisdir->bad_behavior = TRUE;
             }
-            thisdir->shutdown = fin;
+            thisdir->fin = fin;
         }
         
         /* remember the OLD window end for graphing */
@@ -2135,14 +2135,14 @@ dosctptrace(
         /* now, print it if requested */
         if (printem && !printallofem) {
             printf("Packet %lu\n", pnum);
-            printpacket(0,		/* original length not available *///COPY NEEDED
+            printpacket(0,		/* original length not available */
                         (char *)plast - (char *)pip + 1,
                         NULL,0,	/* physical stuff not known here */
                         pip,plast,thisdir);
         }
 
         /* grab the address from this packet */
-        CopyAddr(&tp_in.addr_pair, pip,         //COPY NEEDED
+        CopyAddr(&tp_in.addr_pair, pip,
                  th_sport, th_dport);
 
 
@@ -2211,7 +2211,7 @@ dosctptrace(
         }
         /* unless both sides advertised sack, we shouldn't see them, otherwise
            we hope they actually send them */
-            thisdir->sctp_strain = otherdir->sctp_strain = TCP_SACK;    
+            thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    
     
         /* do data stats */
         //urg = FALSE;
@@ -3544,7 +3544,7 @@ trace_done(void)
 		       
 		    }
                     if (global_sctp)
-                        PrintTrace(ptp);
+                        SctpPrintTrace(ptp);
                     if (!global_sctp)
                         PrintTrace(ptp);
 		}
