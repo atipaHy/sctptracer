@@ -3544,7 +3544,7 @@ trace_done(void)
 		       
 		    }
                     if (global_sctp)
-                        SctpPrintTrace(ptp);
+                        PrintTrace(ptp);
                     if (!global_sctp)
                         PrintTrace(ptp);
 		}
