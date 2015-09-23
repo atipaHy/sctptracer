@@ -555,6 +555,41 @@ typedef struct chunkhdr chunkhdr;
 
 typedef tcp_pair_addrblock sctp_pair_addrblock;
 
+struct sctp_pair {
+    /* are we ignoring this one?? */
+    Bool		ignore_pair;
+
+    /* inactive (previous instance of current connection */
+    Bool		inactive;
+
+    /* endpoint identification */
+    sctp_pair_addrblock	addr_pair;
+
+    /* connection naming information */
+    char		*a_hostname;
+    char		*b_hostname;
+    char		*a_portname;
+    char		*b_portname;
+    char		*a_endpoint;
+    char		*b_endpoint;
+
+    /* connection information */
+    timeval		first_time;
+    timeval		last_time;
+    u_llong		packets;
+    scb			a2b;
+    scb			b2a;
+
+
+    /* module-specific structures, if requested */
+    void		**pmod_info;
+
+    /* which file this connection is from */
+    char		*filename;
+};
+typedef struct sctp_pair sctp_pair;
+typedef struct chunkhdr chunkhdr;
+
 typedef struct scb {
     /* parent pointer */
     struct sctp_pair *ptp;
@@ -783,43 +818,6 @@ typedef struct scb {
     /* host name letter(s) */
     char	*host_letter;
 } scb;
-
-struct sctp_pair {
-    /* are we ignoring this one?? */
-    Bool		ignore_pair;
-
-    /* inactive (previous instance of current connection */
-    Bool		inactive;
-
-    /* endpoint identification */
-    sctp_pair_addrblock	addr_pair;
-
-    /* connection naming information */
-    char		*a_hostname;
-    char		*b_hostname;
-    char		*a_portname;
-    char		*b_portname;
-    char		*a_endpoint;
-    char		*b_endpoint;
-
-    /* connection information */
-    timeval		first_time;
-    timeval		last_time;
-    u_llong		packets;
-    scb			a2b;
-    scb			b2a;
-
-
-    /* module-specific structures, if requested */
-    void		**pmod_info;
-
-    /* which file this connection is from */
-    char		*filename;
-};
-typedef struct sctp_pair sctp_pair;
-typedef struct chunkhdr chunkhdr;
-
-
 
 
 
