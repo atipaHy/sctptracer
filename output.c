@@ -96,6 +96,7 @@ char *sp;  /* Separator used for long output with <SP>-separated-values */
 #define StatLineI StatLineI_L
 #endif /* HAVE_LONG_LONG */
 
+/*TCP specific funcions */
 u_int
 SynCount(
     tcp_pair *ptp)
@@ -135,6 +136,48 @@ ConnReset(
     tcp_pair *ptp)
 {
     return(ptp->a2b.reset_count + ptp->b2a.reset_count != 0);
+}
+
+/*SCTP specific funcions */
+u_int
+InitCount(
+    tcp_pair *ptp)
+{
+    tcb *pab = &ptp->a2b;
+    tcb *pba = &ptp->b2a;
+
+    return(((pab->init_count >= 1)?1:0) +
+	   ((pba->init_count >= 1)?1:0));
+}
+
+
+
+u_int
+ShutdownCount(
+    tcp_pair *ptp)
+{
+    tcb *pab = &ptp->a2b;
+    tcb *pba = &ptp->b2a;
+
+    return(((pab->shutdown_count >= 1)?1:0) +
+	   ((pba->shutdown_count >= 1)?1:0));
+}
+
+
+
+int
+SctpConnComplete(
+    tcp_pair *ptp)
+{
+    return(InitCount(ptp) >= 2 && ShutdownCount(ptp) >= 2);
+}
+
+
+int
+ConnAbort(
+    tcp_pair *ptp)
+{
+    return(ptp->a2b.abort_count + ptp->b2a.abort_count != 0);
 }
 
 
@@ -211,6 +254,9 @@ PrintTrace(
     char *host2 = pba->host_letter;
     char bufl[40],bufr[40];
    
+    /*print which print-function we are using*/
+    printf("\n----------------TCP-PRINT----------------\n");
+    
     /* counters to use for seq. space wrap around calculations
      */
     u_llong stream_length_pab=0, stream_length_pba=0;
@@ -614,6 +660,9 @@ tcp_pair *ptp)
     char *host1 = pab->host_letter;
     char *host2 = pba->host_letter;
     char bufl[40],bufr[40];
+    
+    /*print which print-function we are using*/
+    printf("\n----------------SCTP-PRINT----------------\n");
    
     /* counters to use for seq. space wrap around calculations
      */
@@ -651,13 +700,13 @@ tcp_pair *ptp)
        fprintf(stdout,"\thost %-4s      %s\n",
 	       (snprintf(bufl,sizeof(bufl),"%s:", host2),bufl), ptp->b_endpoint);
        fprintf(stdout,"\tcomplete conn: %s",
-	       ConnReset(ptp)?"RESET":(
-				       ConnComplete(ptp)?"yes":"no"));
-       if (ConnComplete(ptp))
+	       ConnAbort(ptp)?"RESET":(
+				       SctpConnComplete(ptp)?"yes":"no"));
+       if (SctpConnComplete(ptp))
 	 fprintf(stdout,"\n");
        else
-	 fprintf(stdout,"\t(SYNs: %u)  (FINs: %u)\n",
-		 SynCount(ptp), FinCount(ptp));
+	 fprintf(stdout,"\t(INITs: %u)  (SHUTDOWNs: %u)\n",
+		 InitCount(ptp), ShutdownCount(ptp));
        
        fprintf(stdout,"\tfirst packet:  %s\n", ts2ascii(&ptp->first_time));
        fprintf(stdout,"\tlast packet:   %s\n", ts2ascii(&ptp->last_time));
@@ -989,7 +1038,6 @@ tcp_pair *ptp)
 		  Stdev(pba->retr_tm_sum, pba->retr_tm_sum2,
 			pba->retr_tm_count) / 1000.0);
     }
-   
    if(csv || tsv || (sv != NULL)) {
       printf("\n");
       /* Error checking: print an error message if the count of printed fields
