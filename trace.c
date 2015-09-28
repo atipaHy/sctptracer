@@ -1850,8 +1850,10 @@ dosctptrace(
     u_short	th_dport;	/* destination port */
     tcp_seq	th_vertag;	/* verification tag */
     tcp_seq	th_chksum;	/* checksum */
+    tcp_seq	th_seq;		/* sequence number */
     u_int8_t    th_ctype;       /*chunk type*/     
     short	ip_len;		/* total length */
+    Bool	hw_dup = FALSE;	/* duplicate at the hardware level */
     tcb		*thisdir;
     tcb		*otherdir;
     int		dir;
@@ -1975,11 +1977,11 @@ dosctptrace(
         
         /* meta connection stats */
         if (INIT_SET(pchunk))
-            ++thisdir->syn_count;
+            ++thisdir->init_count;
         if (ABORT_SET(pchunk))
-            ++thisdir->reset_count;
+            ++thisdir->abort_count;
         if (SD_SET(pchunk))
-            ++thisdir->fin_count;
+            ++thisdir->shutdown_count;
 
         
         /* idle-time stats */
@@ -2070,19 +2072,19 @@ dosctptrace(
         
         /* bugfix in case of retransmitted init? */
         if (INIT_SET(pchunk)) {
-	/* error checking - better not change! */
-	if ((thisdir->syn_count > 1) && (thisdir->syn != start)) {
-	    /* it changed, that shouldn't happen! */
-	    if (warn_printbad_syn_fin_seq)
-		fprintf(stderr, "\
-                    %s->%s: rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
-			thisdir->host_letter,thisdir->ptwin->host_letter,
-			thisdir->syn, start,
-			(int)(elapsed(ptp_save->first_time,current_time)/1000000));
-	    thisdir->bad_behavior = TRUE;
-	}
-	thisdir->syn = start;
-	otherdir->ack = start;
+            /* error checking - better not change! */
+            if ((thisdir->syn_count > 1) && (thisdir->syn != start)) {
+                /* it changed, that shouldn't happen! */
+                if (warn_printbad_syn_fin_seq)
+                    fprintf(stderr, "\
+                        %s->%s: rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
+                            thisdir->host_letter,thisdir->ptwin->host_letter,
+                            thisdir->syn, start,
+                            (int)(elapsed(ptp_save->first_time,current_time)/1000000));
+                thisdir->bad_behavior = TRUE;
+            }
+            thisdir->syn = start;
+            otherdir->ack = start;
         }
 		/* bug fix for Rob Austein <sra@epilogue.com> */
         
@@ -2223,15 +2225,74 @@ dosctptrace(
             chunklenghtt = tmp222 + 2;
             
             thisdir->data_pkts += 1;
+            sctp_data_length = ntohs(*chunklenghtt)-16;
+            thisdir->data_bytes += sctp_data_length;
             
-            
-            
-            thisdir->data_bytes += ntohs(*chunklenghtt)-16;
-            }
-            if (ZERO_TIME(&thisdir->first_data_time))
-                thisdir->first_data_time = current_time;
-            thisdir->last_data_time = current_time;
-            
+            tt_uint32* tsn = tmp222 + 4;
+            th_seq = ntohl(*tsn);
+        }
+        if (ZERO_TIME(&thisdir->first_data_time))
+            thisdir->first_data_time = current_time;
+        thisdir->last_data_time = current_time;
+        
+        /* instantaneous throughput stats */
+        if (graph_tput && DATA_SET(pchunk)) {
+            DoThru(thisdir,sctp_data_length);
+        }
+
+//        /* segment size graphs */
+//        if ((tcp_data_length > 0) && (thisdir->segsize_plotter != NO_PLOTTER)) {
+//            extend_line(thisdir->segsize_line, current_time, tcp_data_length);
+//            extend_line(thisdir->segsize_avg_line, current_time,
+//                        thisdir->data_bytes / thisdir->data_pkts);
+//        }
+
+        /* sequence number stats */
+        if ((thisdir->min_seq == 0) && (start != 0)) {
+            thisdir->min_seq = start; /* first byte in this segment */
+            thisdir->max_seq = end;	  /* last byte in this segment */
+        }
+        if (SEQ_GREATERTHAN (end,thisdir->max_seq)) {
+            thisdir->max_seq = end;
+        }
+        thisdir->latest_seq = end;
+
+        
+
+        /* check for hardware duplicates */
+        /* only works for IPv4, IPv6 has no mandatory ID field */
+        if (PIP_ISV4(pip) && docheck_hw_dups)
+            hw_dup = check_hw_dups(pip->ip_id, th_seq, thisdir);
+
+        /* Kevin Lahey's ECN code */
+        /* only works for IPv4 */
+//        if (PIP_ISV4(pip)) {
+//            ecn_ce = IP_ECT(pip) && IP_CE(pip);
+//        }
+//        cwr = CWR_SET(ptcp);
+//        ecn_echo = ECN_ECHO_SET(ptcp);
+//
+//        /* save the stream contents, if requested */
+//        if (tcp_data_length > 0) {
+//            u_char *pdata = (u_char *)ptcp + TH_OFF(ptcp)*4;
+//            u_long saved;
+//            u_long	missing;
+//
+//            saved = tcp_data_length;
+//            if ((char *)pdata + tcp_data_length > ((char *)plast+1))
+//                saved = (char *)plast - (char *)pdata + 1;
+//
+//            /* see what's missing */
+//            missing = tcp_data_length - saved;
+//            if (missing > 0) {
+//                thisdir->trunc_bytes += missing;
+//                ++thisdir->trunc_segs;
+//            }
+//
+//            if (save_tcp_data)
+//                ExtractContents(start,tcp_data_length,saved,pdata,thisdir);
+//        }
+
             
         ////////////////////////////////////////////
         
