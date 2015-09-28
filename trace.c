@@ -1977,11 +1977,11 @@ dosctptrace(
         
         /* meta connection stats */
         if (INIT_SET(pchunk))
-            ++thisdir->syn_count;
+            ++thisdir->init_count;
         if (ABORT_SET(pchunk))
-            ++thisdir->reset_count;
+            ++thisdir->abort_count;
         if (SD_SET(pchunk))
-            ++thisdir->fin_count;
+            ++thisdir->shutdown_count;
 
         
         /* idle-time stats */
