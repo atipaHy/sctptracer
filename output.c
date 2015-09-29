@@ -722,16 +722,18 @@ tcp_pair *ptp)
     }
    
     StatLineI("total packets","", pab->packets, pba->packets);
-    if (pab->reset_count || pba->reset_count || csv || tsv || (sv != NULL))
-	StatLineI("resets sent","", pab->reset_count, pba->reset_count);
-    StatLineI("ack pkts sent","", pab->ack_pkts, pba->ack_pkts);
-    StatLineI("pure acks sent","", pab->pureack_pkts, pba->pureack_pkts);
-    StatLineI("sack pkts sent","", pab->num_sacks, pba->num_sacks);
-    StatLineI("dsack pkts sent","", pab->num_dsacks, pba->num_dsacks);
+    if (pab->abort_count || pba->abort_count || csv || tsv || (sv != NULL))
+	StatLineI("resets sent","", pab->abort_count, pba->abort_count);
+    StatLineI("sack pkts sent","", pab->sack_count, pba->sack_count);
+    StatLineI("init ack pkts sent","", pab->init_ack_count, pba->init_ack_count);
+    StatLineI("heartbeat ack pkts sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
+    StatLineI("shutdown ack pkts sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
+    StatLineI("cookie ack pkts sent","", pab->cookie_ack_count, pba->cookie_ack_count);
+    
     StatLineI("max sack blks/ack","", pab->max_sack_blocks, pba->max_sack_blocks);
     StatLineI("unique bytes sent","",
 	      pab->unique_bytes, pba->unique_bytes);
-    StatLineI("actual data pkts","", pab->data_pkts, pba->data_pkts);
+    StatLineI("actual data chunks","", pab->datachunks_count, pba->datachunks_count);
     StatLineI("actual data bytes","", pab->data_bytes, pba->data_bytes);
     StatLineI("rexmt data pkts","", pab->rexmit_pkts, pba->rexmit_pkts);
     StatLineI("rexmt data bytes","",
@@ -743,11 +745,11 @@ tcp_pair *ptp)
     StatLineI("outoforder pkts","",
 	      pab->out_order_pkts, pba->out_order_pkts);
     StatLineI("pushed data pkts","", pab->data_pkts_push, pba->data_pkts_push);
-    StatLineP("SYN/FIN pkts sent","","%s",
+    StatLineP("INIT/SHUTDOWN pkts sent","","%s",
 	      (snprintf(bufl,sizeof(bufl),"%d/%d",
-		       pab->syn_count, pab->fin_count),bufl),
+		       pab->init_count, pab->shutdown_count),bufl),
 	      (snprintf(bufr,sizeof(bufr),"%d/%d",
-		       pba->syn_count, pba->fin_count),bufr));
+		       pba->init_count, pba->shutdown_count),bufr));
     if (pab->f1323_ws || pba->f1323_ws || pab->f1323_ts || pba->f1323_ts || csv || tsv || (sv != NULL)) {
 	StatLineP("req 1323 ws/ts","","%s",
 		  (snprintf(bufl,sizeof(bufl),"%c/%c",
@@ -780,9 +782,9 @@ tcp_pair *ptp)
     StatLineI("min segm size","bytes",
 	      pab->min_seg_size,
 	      pba->min_seg_size);
-    StatLineI("avg segm size","bytes",
-	      (int)((double)pab->data_bytes / ((double)pab->data_pkts+.001)),
-	      (int)((double)pba->data_bytes / ((double)pba->data_pkts+.001)));
+    StatLineI("avg chunk size","bytes",
+	      (int)((double)pab->data_bytes / ((double)pab->chunk_count+.001)),
+	      (int)((double)pba->data_bytes / ((double)pba->chunk_count+.001)));
     StatLineI("max win adv","bytes", pab->win_max, pba->win_max);
     StatLineI("min win adv","bytes", pab->win_min, pba->win_min);
     StatLineI("zero win adv","times",
@@ -838,54 +840,54 @@ tcp_pair *ptp)
     pba_last = (pba->reset_count>0)?pba->latest_seq:pba->fin;
     
     /* calculating stream length for direction pab */
-    if ((pab->syn_count > 0) && (pab->fin_count > 0)) {
+    if ((pab->init_count > 0) && (pab->shutdown_count > 0)) {
 	if (pab->seq_wrap_count > 0) {
-	    if (pab_last > pab->syn) {
-		stream_length_pab = pab_last + (MAX_32 * pab->seq_wrap_count) - pab->syn - 1;
+	    if (pab_last > pab->init) {
+		stream_length_pab = pab_last + (MAX_32 * pab->seq_wrap_count) - pab->init - 1;
 	    }
 	    else {
-		stream_length_pab = pab_last + (MAX_32 * (pab->seq_wrap_count+1)) - pab->syn - 1;
+		stream_length_pab = pab_last + (MAX_32 * (pab->seq_wrap_count+1)) - pab->init - 1;
 	    }
 	}
 	else {
-	    if (pab_last > pab->syn) {
-		stream_length_pab = pab_last - pab->syn - 1;
+	    if (pab_last > pab->init) {
+		stream_length_pab = pab_last - pab->init - 1;
 	    }
 	    else {
-		stream_length_pab = MAX_32 + pab_last - pab->syn - 1;
+		stream_length_pab = MAX_32 + pab_last - pab->init - 1;
 	    }
 	}
     }
 
     /* calculating stream length for direction pba */
-    if ((pba->syn_count > 0) && (pba->fin_count > 0)) {
+    if ((pba->init_count > 0) && (pba->shutdown_count > 0)) {
 	if (pba->seq_wrap_count > 0) {
-	    if (pba_last > pba->syn) {
-		stream_length_pba = pba_last + (MAX_32 * pba->seq_wrap_count) - pba->syn - 1;
+	    if (pba_last > pba->init) {
+		stream_length_pba = pba_last + (MAX_32 * pba->seq_wrap_count) - pba->init - 1;
 	    }
 	    else {
-		stream_length_pba = pba_last + (MAX_32 * (pba->seq_wrap_count+1)) - pba->syn - 1;
+		stream_length_pba = pba_last + (MAX_32 * (pba->seq_wrap_count+1)) - pba->init - 1;
 	    }
 	}
 	else {
-	    if (pba_last > pba->syn) {
-		stream_length_pba = pba_last - pba->syn - 1;
+	    if (pba_last > pba->init) {
+		stream_length_pba = pba_last - pba->init - 1;
 	    }
 	    else {
-		stream_length_pba = MAX_32 + pba_last - pba->syn - 1;
+		stream_length_pba = MAX_32 + pba_last - pba->init - 1;
 	    }
 	}
     }
 
     /* print out values */
-    if ((pab->fin_count > 0) && (pab->syn_count > 0)) {
+    if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
 	char *format = "%8" FS_ULL;
 	StatLineFieldL("ttl stream length", "bytes", format, stream_length_pab, 0);
     }
     else {
 	StatLineField("ttl stream length", "", "%s", (u_long)"NA", 0);
     }
-    if ((pba->fin_count > 0) && (pba->syn_count > 0)) {
+    if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
 	char *format = "%8" FS_ULL;
 	StatLineFieldL("ttl stream length", "bytes", format, stream_length_pba, 1);
     }
@@ -893,14 +895,14 @@ tcp_pair *ptp)
 	StatLineField("ttl stream length", "", "%s", (u_long)"NA", 1);
     }
 
-    if ((pab->fin_count > 0) && (pab->syn_count > 0)) {
+    if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
 	char *format = "%8" FS_ULL;
 	StatLineFieldL("missed data", "bytes", format, (stream_length_pab - pab->unique_bytes), 0);
     }
     else {
 	StatLineField("missed data", "", "%s", (u_long)"NA", 0);
     }
-    if ((pba->fin_count > 0) && (pba->syn_count > 0)) {
+    if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
 	char *format = "%8" FS_ULL;
 	StatLineFieldL("missed data", "bytes", format, (stream_length_pba - pba->unique_bytes), 1);
     }
