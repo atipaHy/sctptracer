@@ -333,6 +333,7 @@ typedef struct tcb {
     u_llong     sack_count;
     u_llong     init_ack_count;
     u_llong     datachunks_count;
+    u_llong	out_order_chunks;
     u_char	init_count;
     u_char	shutdown_count;
     u_char	abort_count;

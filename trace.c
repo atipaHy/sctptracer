@@ -1855,6 +1855,10 @@ dosctptrace(
     u_int8_t    th_ctype;       /*chunk type*/     
     short	ip_len;		/* total length */
     Bool	hw_dup = FALSE;	/* duplicate at the hardware level */
+    Bool	retrans;
+    Bool 	probe;
+    int		retrans_num_bytes;
+    Bool	out_order;	/* out of order */
     tcb		*thisdir;
     tcb		*otherdir;
     int		dir;
@@ -2293,8 +2297,29 @@ dosctptrace(
 //            if (save_tcp_data)
 //                ExtractContents(start,tcp_data_length,saved,pdata,thisdir);
 //        }
+        
+        /* do rexmit stats */
+        retrans = FALSE;
+        probe = FALSE;
+        out_order = FALSE;
+        retrans_num_bytes = 0;
+        if (DATA_SET(pchunk)) {
+            int len = 1;            //sctp datachunk is one tsn
+            int retrans_cnt=0;
+
+            if(rexmitSctp(thisdir,start, len, &out_order))
+                retrans_cnt = retrans_num_bytes = sctp_data_length;
+            
+            thisdir->rexmit_bytes += retrans_num_bytes; //TABORT senare
+
+            if (out_order)
+                ++thisdir->out_order_chunks;
+            
+
+        }
 
             
+        
         ////////////////////////////////////////////
         
         /* point to next chunkhdr or eop */
