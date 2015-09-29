@@ -119,6 +119,30 @@ static void graph_rtt_sample (tcb *,
  *   returns: number of retransmitted bytes in segment, 0 if not a rexmit
  *            *pout_order to to TRUE if segment is out of order
  */
+
+int
+rexmitSctp (tcb * ptcb,
+	seqnum seq,
+	seglen len,
+	Bool * pout_order)
+{
+    seqspace *sspace = ptcb->ss;
+    seqnum seq_last = seq + len - 1;
+    quadrant *pquad;
+    int rexlen = 0;
+
+    /* unless told otherwise, it's IN order */
+    *pout_order = FALSE;
+
+    /* see which quadrant it starts in */
+    pquad = whichquad (sspace, seq);
+
+    /* add the new segment into the segment database */
+    rexlen = addseg (ptcb, pquad, seq, len, pout_order);
+
+    return (rexlen);
+}
+
 int
 rexmit (tcb * ptcb,
 	seqnum seq,
