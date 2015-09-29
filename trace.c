@@ -2302,56 +2302,23 @@ dosctptrace(
         probe = FALSE;
         out_order = FALSE;
         retrans_num_bytes = 0;
-//        if (DATA_SET(pchunk) && sctp_data_length > 0) {
-//            int len = sctp_data_length;
-//            int retrans_cnt=0;
-//
-//            //if (SYN_SET(ptcp)) ++len;
-//            //if (FIN_SET(ptcp)) ++len;
-//
-//
-//            /* Don't consider for rexmit, if the send window is 0 */
-//            /* We are probably doing window probing.. */
-//            /* Patch from Ulisses Alonso Camaro : Not treat the SYN segments
-//             * as probes, even though a zero window was advertised from the 
-//             * opposite direction */
-//            if( (otherdir->win_last==0) && (otherdir->packets > 0) &&
-//               /* Patch from Ulisses Alonso Camaro : Not treat the SYN segments
-//                * as probes, even though a zero window was advertised from the 
-//                * opposite direction */
-//                (!SYN_SET(ptcp)) ) {
-//                    probe=TRUE;
-//                    thisdir->num_zwnd_probes++;	
-//                    thisdir->zwnd_probe_bytes += tcp_data_length;
-//            }
-//            else
-//                    retrans_cnt = retrans_num_bytes = rexmit(thisdir,start, len, &out_order);
-//
-//            if (out_order)
-//                ++thisdir->out_order_pkts;
-//
-//            /* count anything NOT retransmitted as "unique" */
-//            /* exclude SYN and FIN */
-//            if (SYN_SET(ptcp)) {
-//                /* don't count the SYN as data */
-//                --len;
-//                /* if the SYN was rexmitted, then don't count it */
-//                if (thisdir->syn_count > 1)
-//                    --retrans_cnt;
-//            }
-//            if (FIN_SET(ptcp)) {
-//                /* don't count the FIN as data */
-//                --len;
-//                /* if the FIN was rexmitted, then don't count it */
-//                if (thisdir->fin_count > 1)
-//                    --retrans_cnt;
-//            }
-//            if (!probe){
-//                    if(retrans_cnt < len)
-//                    thisdir->unique_bytes += (len - retrans_cnt);
-//            }
-//        
-//        }
+        if (DATA_SET(pchunk) && sctp_data_length > 0) {
+            int len = sctp_data_length;
+            int retrans_cnt=0;
+
+           
+            retrans_cnt = retrans_num_bytes = rexmit(thisdir,start, len, &out_order);
+
+            if (out_order)
+                ++thisdir->out_order_pkts;
+
+           
+            if (!probe){
+                    if(retrans_cnt < len)
+                    thisdir->unique_bytes += (len - retrans_cnt);
+            }
+        
+        }
 
             
         
