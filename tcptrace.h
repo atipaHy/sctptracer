@@ -303,7 +303,11 @@ typedef struct tcb {
     timeval	time;
     
     /* SCTP information */
-    seqnum      sack;
+    seqnum      sack;   
+    seqnum      heartbeat_ack;
+    seqnum      shutdown_ack;
+    seqnum      cookie_ack;
+    seqnum      init_ack;
     seqnum      init;
     seqnum      shutdown;
 
@@ -323,7 +327,12 @@ typedef struct tcb {
     
     /* SCTP specifics */
     u_llong     chunk_count;
+    u_llong     heartbeat_ack_count;
+    u_llong     shutdown_ack_count;
+    u_llong     cookie_ack_count;
     u_llong     sack_count;
+    u_llong     init_ack_count;
+    u_llong     datachunks_count;
     u_char	init_count;
     u_char	shutdown_count;
     u_char	abort_count;
