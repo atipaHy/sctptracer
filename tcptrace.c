@@ -795,7 +795,12 @@ main(
     gettimeofday(&wallclock_finished, NULL);
 
     /* general output */
-    fprintf(stdout, "%s%lu packets seen, %lu TCP packets traced",
+    if (global_sctp)
+        fprintf(stdout, "%s%lu packets seen, %lu SCTP packets traced",
+                comment, pnum, sctp_trace_count);
+    
+    else
+        fprintf(stdout, "%s%lu packets seen, %lu TCP packets traced",
 	    comment, pnum, sctp_trace_count);
     if (do_udp)
 	fprintf(stdout,", %lu UDP packets traced", udp_trace_count);
