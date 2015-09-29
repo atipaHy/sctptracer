@@ -2033,7 +2033,7 @@ dosctptrace(
             int* ptmp;
             void* ptmp2;
             ptmp2 = pchunk;
-            ptmp = ptmp2 + 8;
+            ptmp = ptmp2 + 4;
             start = ntohl(*ptmp);
             end = start;
         }
@@ -2201,7 +2201,6 @@ dosctptrace(
             numduptsn = ntohs(*ptofield2);
         }
     
-        ////////////////CHRISTOS/////////////////////
         /* NOW, unless BOTH sides asked for window scaling in their SYN	*/
         /* segments, we aren't using window scaling */
         if (!INIT_SET(pchunk) &&
@@ -2307,15 +2306,16 @@ dosctptrace(
             int len = 1;            //sctp datachunk is one tsn
             int retrans_cnt=0;
 
-            if(rexmitSctp(thisdir,start, len, &out_order))
+            /* rexmit function for sctp only tell us if chunk was
+               rexmitted not how many bytes that were, if the chunk
+               was rexmitted all data in the chunk was.*/
+            if(rexmit(thisdir,start, len, &out_order))
                 retrans_cnt = retrans_num_bytes = sctp_data_length;
+           
+            thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             
-            thisdir->rexmit_bytes += retrans_num_bytes; //TABORT senare
-
             if (out_order)
-                ++thisdir->out_order_chunks;
-            
-
+                ++thisdir->out_order_chunks;     
         }
 
             
