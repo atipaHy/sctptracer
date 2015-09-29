@@ -3453,6 +3453,7 @@ trace_done(void)
   static int count = 0;
   Bool incomplete_pkt_capture = FALSE;
   
+  
   if (!run_continuously) {
     if (!printsuppress) {
 	if (num_sctp_pairs > 0) {
