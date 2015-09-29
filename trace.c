@@ -2303,22 +2303,19 @@ dosctptrace(
         probe = FALSE;
         out_order = FALSE;
         retrans_num_bytes = 0;
-        if (DATA_SET(pchunk) && sctp_data_length > 0) {
-            int len = sctp_data_length;
+        if (DATA_SET(pchunk)) {
+            int len = 1;            //sctp datachunk is one tsn
             int retrans_cnt=0;
 
-           
-            retrans_cnt = retrans_num_bytes = rexmit(thisdir,start, len, &out_order);
+            if(rexmitSctp(thisdir,start, len, &out_order))
+                retrans_cnt = retrans_num_bytes = sctp_data_length;
+            
+            thisdir->rexmit_bytes += retrans_num_bytes; //TABORT senare
 
             if (out_order)
-                ++thisdir->out_order_pkts;
+                ++thisdir->out_order_chunks;
+            
 
-           
-            if (!probe){
-                    if(retrans_cnt < len)
-                    thisdir->unique_bytes += (len - retrans_cnt);
-            }
-        
         }
 
             

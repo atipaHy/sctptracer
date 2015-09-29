@@ -127,9 +127,9 @@ rexmitSctp (tcb * ptcb,
 	Bool * pout_order)
 {
     seqspace *sspace = ptcb->ss;
-    seqnum seq_last = seq + len - 1;
+    //seqnum seq_last = seq + len - 1;
     quadrant *pquad;
-    int rexlen = 0;
+    int isrexmit = 0;
 
     /* unless told otherwise, it's IN order */
     *pout_order = FALSE;
@@ -138,9 +138,9 @@ rexmitSctp (tcb * ptcb,
     pquad = whichquad (sspace, seq);
 
     /* add the new segment into the segment database */
-    rexlen = addseg (ptcb, pquad, seq, len, pout_order);
+    isrexmit = addseg (ptcb, pquad, seq, len, pout_order);
 
-    return (rexlen);
+    return (isrexmit);
 }
 
 int
