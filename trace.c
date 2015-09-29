@@ -77,6 +77,7 @@ static int tline_left  = 0; /* left and right time lines for the time line chart
 static int tline_right = 0;
 
 /* provided globals  */
+int num_sctp_pairs = -1;
 int num_tcp_pairs = -1;	/* how many pairs we've allocated */
 tcp_pair **ttp = NULL;	/* array of pointers to allocated pairs */
 int max_tcp_pairs = 64; /* initial value, automatically increases */
@@ -503,16 +504,16 @@ NewTTPsctp(
       printf("trace.c:NewTTP() calling MakeTcpPair()\n");
     }
     ptp = MakeTcpPair();
-    ++num_tcp_pairs;
+    ++num_sctp_pairs;
 
     if (!run_continuously) {
       /* make a new one, if possible */
-      if ((num_tcp_pairs+1) >= max_tcp_pairs) {
-	MoreTcpPairs(num_tcp_pairs+1);
+      if ((num_sctp_pairs+1) >= max_tcp_pairs) {
+	MoreTcpPairs(num_sctp_pairs+1);
       }
       /* create a new TCP pair record and remember where you put it */
-      ttp[num_tcp_pairs] = ptp;
-      ptp->ignore_pair = ignore_pairs[num_tcp_pairs];
+      ttp[num_sctp_pairs] = ptp;
+      ptp->ignore_pair = ignore_pairs[num_sctp_pairs];
     }
 
 
@@ -3454,19 +3455,29 @@ trace_done(void)
   
   if (!run_continuously) {
     if (!printsuppress) {
-	if (sctp_trace_count == 0) {
-	    fprintf(stdout,"%sno traced TCP packets\n", comment);
-	    return;
-	} else {
+	if (global_sctp) {
+	    fprintf(stdout,"%sSCTP connection info:\n", comment);
+	}
+        else if(num_tcp_pairs > 0){
 	    fprintf(stdout,"%sTCP connection info:\n", comment);
 	}
+        else{
+            fprintf(stdout,"%sNo TCP or SCTP packets found:\n", comment);
+            return;
+        }
     }
 
     if (!printbrief)
-	fprintf(stdout,"%s%d TCP %s traced:\n",
-		comment,
-		num_tcp_pairs + 1,
-		num_tcp_pairs==0?"connection":"connections");
+        if (global_sctp)
+            fprintf(stdout,"%s%d SCTP %s traced:\n",
+                    comment,
+                    num_sctp_pairs + 1,
+                    num_sctp_pairs==0?"connection":"connections");
+        else
+            fprintf(stdout,"%s%d TCP %s traced:\n",
+                    comment,
+                    num_tcp_pairs + 1,
+                    num_tcp_pairs==0?"connection":"connections");
     if (ctrunc > 0) {
 	fprintf(stdout,
 		"%s*** %lu packets were too short to process at some point\n",
@@ -3516,31 +3527,61 @@ trace_done(void)
     }
 
     /* complete the "idle time" calculations using NOW */
-    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
-	tcp_pair *ptp = ttp[ix];
-	tcb *thisdir; 
-	u_llong itime;
+    if(global_sctp){
+        for (ix = 0; ix <= num_sctp_pairs; ++ix) {
+            tcp_pair *ptp = ttp[ix];
+            tcb *thisdir; 
+            u_llong itime;
 
-	/* if it's CLOSED, skip it */
-	if ((FinCount(ptp)>=2) || (ConnReset(ptp)))
-	    continue;
+            /* if it's CLOSED, skip it */
+            if ((ShutdownCount(ptp)>=2) || (ConnReset(ptp)))
+                continue;
 
-	/* a2b direction */
-	thisdir = &ptp->a2b;
-	if (!ZERO_TIME(&thisdir->last_time)) {
-	    itime = elapsed(thisdir->last_time,current_time);
-	    if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	}
-	    
+            /* a2b direction */
+            thisdir = &ptp->a2b;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
 
-	/* b2a direction */
-	thisdir = &ptp->b2a;
-	if (!ZERO_TIME(&thisdir->last_time)) {
-	    itime = elapsed(thisdir->last_time,current_time);
-	    if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	}
+
+            /* b2a direction */
+            thisdir = &ptp->b2a;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+        }
+    }
+    else{
+        for (ix = 0; ix <= num_tcp_pairs; ++ix) {
+            tcp_pair *ptp = ttp[ix];
+            tcb *thisdir; 
+            u_llong itime;
+
+            /* if it's CLOSED, skip it */
+            if ((FinCount(ptp)>=2) || (ConnReset(ptp)))
+                continue;
+
+            /* a2b direction */
+            thisdir = &ptp->a2b;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+
+
+            /* b2a direction */
+            thisdir = &ptp->b2a;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+        }
     }
   }
 
@@ -3554,7 +3595,7 @@ trace_done(void)
 	    exit(-1);
 	}
 
-      if (filter_output) {
+      if (filter_output && global_sctp) {
 	 if (!run_continuously) {
 	    /* mark the connections to ignore */
 	    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
@@ -3571,10 +3612,80 @@ trace_done(void)
 	    }
 	 }
       }
+      else if(filter_output){
+      	 if (!run_continuously) {
+	    /* mark the connections to ignore */
+	    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
+	       ptp = ttp[ix];
+	       if (PassesFilter(ptp)) {
+		  if (++count == 1)
+		      fprintf(f_passfilter,"%d", ix+1);
+		  else
+		      fprintf(f_passfilter,",%d", ix+1);
+	       } 
+               else {
+		  /* else ignore it */
+		  ptp->ignore_pair = TRUE;
+	       }
+	    }
+	 }
+      }
     }
    
-  if (!run_continuously) {
+  if (!run_continuously && global_sctp) {
     /* print each connection */
+    if (!printsuppress) {
+        Bool first = TRUE; /* Used with <SP>-separated-values
+			    * Keeps track of whether header has already
+			    * been printed */
+	for (ix = 0; ix <= num_sctp_pairs; ++ix) {
+	    ptp = ttp[ix];
+
+	    if (!ptp->ignore_pair) {
+		if ((printbrief) && (!ignore_non_comp || SctpConnComplete(ptp))) {
+		    fprintf(stdout,"%3d: ", ix+1);
+		    PrintBrief(ptp);
+		} else if (!ignore_non_comp || SctpConnComplete(ptp)) {
+		    if(csv || tsv || (sv != NULL)) {
+		       if(first) {
+			  PrintSVHeader();
+			  first = FALSE;
+		       }
+		       fprintf(stdout, "%d%s", ix+1, sp);
+		    }
+		    else {
+		       if (ix > 0)
+			 fprintf(stdout,"================================\n");
+		       fprintf(stdout,"SCTP connection %d:\n", ix+1);
+		       
+		    }
+                    SctpPrintTrace(ptp);
+		}
+	       /* This piece of code dumps PF file when filtered with '-c' 
+		  option, this option says to select only complete connections.
+		  The PF file will contain the connection numbers which are
+		  selected to be complete */
+	       if (ignore_non_comp)
+		   if (ConnComplete(ptp)) {
+		      if (++count == 1)
+			  fprintf(f_passfilter, "%d", ix+1);
+		      else
+			  fprintf(f_passfilter, ",%d", ix+1);
+		   }
+	       /******************************/
+	      
+	      /* If we are extracting packet contents (-e option), we shall check to
+	       * see if we missed segments during packet capture causing the
+	       * X2Y_contents.dat files that we drop to contain voids in them.
+	       * We shall emit a warning upon such an event below. */
+	      if (save_tcp_data && !incomplete_pkt_capture && MissingData(ptp)) 
+		incomplete_pkt_capture = TRUE;
+	    }	  
+	}
+    }
+  }
+  else if(!run_continuously){
+          /* print each connection */
     if (!printsuppress) {
         Bool first = TRUE; /* Used with <SP>-separated-values
 			    * Keeps track of whether header has already
@@ -3600,10 +3711,7 @@ trace_done(void)
 		       fprintf(stdout,"TCP connection %d:\n", ix+1);
 		       
 		    }
-                    if (global_sctp)
-                        SctpPrintTrace(ptp);
-                    if (!global_sctp)
-                        PrintTrace(ptp);
+                    PrintTrace(ptp);
 		}
 	       /* This piece of code dumps PF file when filtered with '-c' 
 		  option, this option says to select only complete connections.
