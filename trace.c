@@ -3456,7 +3456,7 @@ trace_done(void)
   
   if (!run_continuously) {
     if (!printsuppress) {
-	if (num_sctp_pairs > 0) {
+	if (num_sctp_pairs > 0 || global_sctp) {
 	    fprintf(stdout,"%sSCTP connection info:\n", comment);
 	}
         else if(num_tcp_pairs > 0){
