@@ -729,6 +729,7 @@ tcp_pair *ptp)
     StatLineI("heartbeat ack pkts sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
     StatLineI("shutdown ack pkts sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
     StatLineI("cookie ack pkts sent","", pab->cookie_ack_count, pba->cookie_ack_count);
+    StatLineI("cookie pkts sent","", pab->cookie_count, pba->cookie_count);
     
     StatLineI("max sack blks/ack","", pab->max_sack_blocks, pba->max_sack_blocks);
     StatLineI("unique bytes sent","",
