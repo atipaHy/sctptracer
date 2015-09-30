@@ -329,11 +329,17 @@ typedef struct tcb {
     u_llong     chunk_count;
     u_llong     heartbeat_ack_count;
     u_llong     shutdown_ack_count;
+    u_llong     cookie_count;
     u_llong     cookie_ack_count;
     u_llong     sack_count;
     u_llong     init_ack_count;
     u_llong     datachunks_count;
     u_llong	out_order_chunks;
+    u_llong	error_chunks_count;
+    u_llong	ecne_chunk_count;
+    u_llong	cwr_chunk_count;
+    u_llong	auth_chunk_count;
+    u_llong	unknown_chunk_count;
     u_char	init_count;
     u_char	shutdown_count;
     u_char	abort_count;
