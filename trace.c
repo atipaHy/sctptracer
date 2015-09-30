@@ -1939,6 +1939,7 @@ dosctptrace(
 //    end = start + sctp_data_length;
     
     ++thisdir->packets;
+    ++ptp_save->packets;
     
     chunkhdr *pchunk;
     
