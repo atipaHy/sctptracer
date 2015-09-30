@@ -1957,7 +1957,7 @@ dosctptrace(
         else if(INIT_SET(pchunk)){++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
-        else if(HB_SET(pchunk)){++thisdir->heartbeat_ack;}
+        else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
         else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
         else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
         else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
@@ -2296,9 +2296,11 @@ dosctptrace(
 
             /* rexmit function for sctp only tell us if chunk was
                rexmitted not how many bytes that were, if the chunk
-               was rexmitted all data in the chunk was.*/
+               was rexmitted all data in the chunk was. */
             if(rexmit(thisdir,start, len, &out_order))
                 retrans_cnt = retrans_num_bytes = sctp_data_length;
+            else
+                thisdir->unique_bytes += sctp_data_length;
            
             thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             
@@ -2325,8 +2327,7 @@ dosctptrace(
     
     
     
-    tcp_pair *hej;
-    return hej;
+    return ptp_save;
 }
 
 tcp_pair *

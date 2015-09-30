@@ -327,6 +327,7 @@ typedef struct tcb {
     
     /* SCTP specifics */
     u_llong     chunk_count;
+    u_llong     heartbeat_count;
     u_llong     heartbeat_ack_count;
     u_llong     shutdown_ack_count;
     u_llong     cookie_count;
