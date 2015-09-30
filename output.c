@@ -724,12 +724,21 @@ tcp_pair *ptp)
     StatLineI("total packets","", pab->packets, pba->packets);
     if (pab->abort_count || pba->abort_count || csv || tsv || (sv != NULL))
 	StatLineI("resets sent","", pab->abort_count, pba->abort_count);
-    StatLineI("sack pkts sent","", pab->sack_count, pba->sack_count);
-    StatLineI("init ack pkts sent","", pab->init_ack_count, pba->init_ack_count);
-    StatLineI("heartbeat ack pkts sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
-    StatLineI("shutdown ack pkts sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
-    StatLineI("cookie ack pkts sent","", pab->cookie_ack_count, pba->cookie_ack_count);
-    StatLineI("cookie pkts sent","", pab->cookie_count, pba->cookie_count);
+    StatLineI("sack chunk sent","", pab->sack_count, pba->sack_count);
+    StatLineI("init ack chunk sent","", pab->init_ack_count, pba->init_ack_count);
+    StatLineI("heartbeat ack chunk sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
+    StatLineI("heartbeat chunk sent","", pab->heartbeat_count, pba->heartbeat_count);
+    StatLineI("shutdown ack chunk sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
+    StatLineI("cookie ack chunk sent","", pab->cookie_ack_count, pba->cookie_ack_count);
+    StatLineI("cookie chunk sent","", pab->cookie_count, pba->cookie_count);
+    StatLineI("cookie echo chunk sent","", pab->cookie_echo_count, pba->cookie_echo_count);
+    StatLineI("abort chunk sent","", pab->abort_count, pba->abort_count);
+    StatLineI("error chunk sent","", pab->error_count, pba->error_count);
+    StatLineI("ecne chunk sent","", pab->ecne_count, pba->ecne_count);
+    StatLineI("cwr chunk sent","", pab->cwr_count, pba->cwr_count);
+    StatLineI("shutdown complete chunk sent","", pab->shutdown_complete_count, pba->shutdown_complete_count);
+    StatLineI("other chunk sent","", pab->other_count, pba->other_count);
+
     
     StatLineI("max sack blks/ack","", pab->max_sack_blocks, pba->max_sack_blocks);
     StatLineI("unique bytes sent","",
