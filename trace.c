@@ -1953,7 +1953,7 @@ dosctptrace(
     while((int)pchunk < (int)eopacket)
     {
         /* count chunktypes */
-        if(DATA_SET(pchunk)){++thisdir->datachunks_count;}
+        if(DATA_SET(pchunk)){++thisdir->data_count;}
         else if(INIT_SET(pchunk)){++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
@@ -1962,14 +1962,14 @@ dosctptrace(
         else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
         else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
         else if(SDACK_SET(pchunk)){++thisdir->shutdown_ack_count;}
-        else if(ERR_SET(pchunk)){++thisdir->error_chunks_count;}
-        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_count;}
+        else if(ERR_SET(pchunk)){++thisdir->error_count;}
+        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_echo_count;}
         else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
-        else if(ECNE_SET(pchunk)){++thisdir->ecne_chunk_count;}
-        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_chunk_count;}
+        else if(ECNE_SET(pchunk)){++thisdir->ecne_count;}
+        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_count;}
         else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_ack_count;}
-        else if(AUTH_SET(pchunk)){++thisdir->auth_chunk_count;}
-        else {++thisdir->unknown_chunk_count;}
+        else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
+        else {++thisdir->other_count;}
         ++thisdir->chunk_count;
 
         /* chunklength with padding */
@@ -2305,7 +2305,7 @@ dosctptrace(
             thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             
             if (out_order)
-                ++thisdir->out_order_chunks;     
+                ++thisdir->out_order;     
         }
 
             

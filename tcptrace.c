@@ -1124,8 +1124,10 @@ for other packet types, I just don't have a place to test them\n\n");
 	/* find the start of the TCP header */
         Bool SCTP = FALSE;
 	ret = getsctp (pip, &psctp, &plast);
-        if(ret < 0)
+        if(ret < 0){
             ret = gettcp (pip, &ptcp, &plast);
+            global_sctp = 0;
+        }
         else
         {
             SCTP = TRUE;
