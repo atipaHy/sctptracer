@@ -1948,46 +1948,35 @@ dosctptrace(
     pchunk = tmp + 12;      //commonhdr always 12 bytes
     void *eopacket = tmp + sctp_length;
     
-    static int data = 0,init = 0, init_ack = 0, sack = 0, heart_beat = 0, heart_beat_ack = 0,
-        abort = 0, shutdown = 0, shutdown_ack = 0, error = 0, cookie_echo = 0,
-        cookie_ack = 0, ecne = 0, cwr = 0, shutdown_complete = 0, auth = 0;
     
     /* read all chunkhdrs within packet */
     while((int)pchunk < (int)eopacket)
     {
         /* count chunktypes */
-        if(DATA_SET(pchunk)){data++;}
-        else if(INIT_SET(pchunk)){init++;}
-        else if(INITACK_SET(pchunk)){init_ack++;}
-        else if(SACK_SET(pchunk)){sack++;}
-        else if(HB_SET(pchunk)){heart_beat++;}
-        else if(HBACK_SET(pchunk)){heart_beat_ack++;}
-        else if(ABORT_SET(pchunk)){abort++;}
-        else if(SD_SET(pchunk)){shutdown++;}
-        else if(SDACK_SET(pchunk)){shutdown_ack++;}
-        else if(ERR_SET(pchunk)){error++;}
-        else if(COOKECHO_SET(pchunk)){cookie_echo++;}
-        else if(COOKACK_SET(pchunk)){cookie_ack++;}
-        else if(ECNE_SET(pchunk)){ecne++;}
-        else if(CWRSCTP_SET(pchunk)){cwr++;}
-        else if(SDCOMP_SET(pchunk)){shutdown_complete++;}
-        else if(AUTH_SET(pchunk)){auth++;}
-        else {}
+        if(DATA_SET(pchunk)){++thisdir->datachunks_count;}
+        else if(INIT_SET(pchunk)){++thisdir->init_count;}
+        else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
+        else if(SACK_SET(pchunk)){++thisdir->sack_count;}
+        else if(HB_SET(pchunk)){++thisdir->heartbeat_ack;}
+        else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
+        else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
+        else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
+        else if(SDACK_SET(pchunk)){++thisdir->shutdown_ack_count;}
+        else if(ERR_SET(pchunk)){++thisdir->error_chunks_count;}
+        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_count;}
+        else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
+        else if(ECNE_SET(pchunk)){++thisdir->ecne_chunk_count;}
+        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_chunk_count;}
+        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_ack_count;}
+        else if(AUTH_SET(pchunk)){++thisdir->auth_chunk_count;}
+        else {++thisdir->unknown_chunk_count;}
+        ++thisdir->chunk_count;
 
         /* chunklength with padding */
         int chunklength = ntohs(pchunk->th_chunklength);
         while(chunklength%4!=0)
             chunklength++;
-
         
-        /* meta connection stats */
-        if (INIT_SET(pchunk))
-            ++thisdir->init_count;
-        if (ABORT_SET(pchunk))
-            ++thisdir->abort_count;
-        if (SD_SET(pchunk))
-            ++thisdir->shutdown_count;
-
         
         /* idle-time stats */
         if (!ZERO_TIME(&thisdir->last_time)) {
@@ -2221,7 +2210,6 @@ dosctptrace(
             thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    
     
         /* do data stats */
-        //urg = FALSE;
         if (DATA_SET(pchunk)) {
             tt_uint16* chunklenghtt;  
             void* tmp222;   
