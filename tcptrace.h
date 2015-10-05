@@ -113,6 +113,7 @@ static char const GCC_UNUSED rcsid_tcptrace[] =
 /*global variable to know what sort of packet*/
 extern int global_sctp;
 
+
 /* we want LONG LONG in some places */
 #if SIZEOF_UNSIGNED_LONG_LONG_INT >= 8
 #define HAVE_LONG_LONG
@@ -289,10 +290,32 @@ typedef struct seqspace {
     quadrant 	*pquad[4];
 } seqspace;
 
+
+/* Data stats per stream */
+typedef struct data_info{
+    u_llong     data_count;
+    u_llong     data_bytes;
+    u_llong	unique_bytes;	/* bytes sent (-FIN/SYN), excluding rexmits */
+    u_llong	rexmit_bytes;
+    u_llong	rexmit_pkts;
+}data_info;
+
+typedef struct stream_info stream_info;
+
+typedef struct stream_info{
+    tt_uint16       stream_id;
+    data_info       this_stream;
+    stream_info*    pnext;
+}stream_info; 
+
+
+
 typedef struct tcb {
     /* parent pointer */
     struct stcp_pair *ptp;
     struct tcb	*ptwin;
+    
+    stream_info*    stream_list;
 
     /* TCP information */
     seqnum	ack;
@@ -534,6 +557,8 @@ typedef struct tcb {
     /* host name letter(s) */
     char	*host_letter;
 } tcb;
+
+
 
 
 typedef u_short hash;

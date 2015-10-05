@@ -1834,6 +1834,43 @@ RemoveTcpPair(
   FreeTcpPair(ptp);
 }
 
+stream_info *  
+get_stream_tcb(
+    tcb *thisdir,
+    tt_uint16 streamid)
+{
+    stream_info* current_stream;
+    current_stream = thisdir->stream_list;
+    
+    if(current_stream == NULL){
+        //printf("First case\n");
+        stream_info* si = malloc(sizeof(stream_info));
+        thisdir->stream_list = si;
+        si->this_stream.data_count = 0;
+        si->pnext = NULL;
+        si->stream_id = streamid;
+        return si;
+    }
+    stream_info* last_stream = current_stream;
+    while(current_stream != NULL){
+        //printf("%d = %d\n", streamid, current_stream->stream_id);
+        if(current_stream->stream_id == streamid)
+        {//printf("streamid found\n");
+            return current_stream; }
+        if(current_stream->pnext != NULL)
+            last_stream = last_stream->pnext;
+        //printf("next stream\n");
+        current_stream = current_stream->pnext;
+    }
+    //printf("Add at end\n");
+    stream_info* si = malloc(sizeof(stream_info));
+    last_stream->pnext = si;
+    si->this_stream.data_count = 0;
+    si->pnext = NULL;
+    si->stream_id = streamid;
+
+    return si;
+}
 
 tcp_pair *
 dosctptrace(
@@ -1842,34 +1879,36 @@ dosctptrace(
     void *plast)
 {
     struct tcp_options *psctpo;
-    PLOTTER	to_tsgpl;
-    PLOTTER	from_tsgpl;
-    PLOTTER     tlinepl;
-    tcp_pair	*ptp_save;
-    tcp_pair	tp_in;
-    u_short	th_sport;	/* source port */
-    u_short	th_dport;	/* destination port */
-    tcp_seq	th_vertag;	/* verification tag */
-    tcp_seq	th_chksum;	/* checksum */
-    tcp_seq	th_seq;		/* sequence number */
-    u_int8_t    th_ctype;       /*chunk type*/     
-    short	ip_len;		/* total length */
-    Bool	hw_dup = FALSE;	/* duplicate at the hardware level */
-    Bool	retrans;
-    Bool 	probe;
-    int		retrans_num_bytes;
-    Bool	out_order;	/* out of order */
-    tcb		*thisdir;
-    tcb		*otherdir;
-    int		dir;
-    int		sctp_length;
-    int		sctp_data_length;
-    u_long	start;
-    u_long	end;
-    u_short	th_win;		/* window */
-    u_long	eff_win;	/* window after scaling */
-    seqnum	old_this_windowend; /* for graphing */
-    ptp_ptr	*sctp_ptr = NULL;
+    PLOTTER         to_tsgpl;
+    PLOTTER         from_tsgpl;
+    PLOTTER         tlinepl;
+    tcp_pair        *ptp_save;
+    tcp_pair        tp_in;
+    u_short         th_sport;	/* source port */
+    u_short         th_dport;	/* destination port */
+    tcp_seq         th_vertag;	/* verification tag */
+    tcp_seq         th_chksum;	/* checksum */
+    tt_uint16       stream_id;
+    tcp_seq         th_seq;		/* sequence number */
+    u_int8_t        th_ctype;       /*chunk type*/     
+    short           ip_len;		/* total length */
+    Bool            hw_dup = FALSE;	/* duplicate at the hardware level */
+    Bool            retrans;
+    Bool            probe;
+    int             retrans_num_bytes;
+    Bool            out_order;	/* out of order */  
+    tcb             *thisdir;
+    tcb             *otherdir;
+    stream_info     *thisstream;
+    int             dir;
+    int             sctp_length;
+    int             sctp_data_length;
+    u_long          start;
+    u_long          end;
+    u_short         th_win;		/* window */
+    u_long          eff_win;	/* window after scaling */
+    seqnum          old_this_windowend; /* for graphing */
+    ptp_ptr         *sctp_ptr = NULL;
     
     /* make sure we have enough of the packet */
     if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
@@ -1954,7 +1993,16 @@ dosctptrace(
     while((int)pchunk < (int)eopacket)
     {
         /* count chunktypes */
-        if(DATA_SET(pchunk)){++thisdir->data_count;}
+        if(DATA_SET(pchunk)){
+            ++thisdir->data_count;
+            void *tmp = pchunk;
+            tt_uint16* pstream_id = tmp + 8;
+            stream_id = ntohs(*pstream_id);
+            printf("StreamID: %d, ", stream_id);
+            thisstream = get_stream_tcb(thisdir, stream_id);
+            ++thisstream->this_stream.data_count;
+            printf("Data Count: %d\n", thisstream->this_stream.data_count);
+        }
         else if(INIT_SET(pchunk)){++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
