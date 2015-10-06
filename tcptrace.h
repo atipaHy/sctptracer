@@ -368,6 +368,7 @@ typedef struct tcb {
     u_char	init_count;
     u_char	shutdown_count;
     u_char	abort_count;
+    u_llong     stream_count;
     
     
     /* statistics added */

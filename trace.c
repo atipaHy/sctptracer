@@ -523,6 +523,9 @@ NewTTPsctp(
 
     ptp->a2b.time.tv_sec = -1;
     ptp->b2a.time.tv_sec = -1;
+    
+    ptp->a2b.stream_count = 0;
+    ptp->b2a.stream_count = 0;
 
     ptp->a2b.host_letter = strdup(NextHostLetter());
     ptp->b2a.host_letter = strdup(NextHostLetter());
@@ -1849,6 +1852,7 @@ get_stream_tcb(
         si->this_stream.data_count = 0;
         si->pnext = NULL;
         si->stream_id = streamid;
+        ++thisdir->stream_count;
         return si;
     }
     stream_info* last_stream = current_stream;
@@ -1868,6 +1872,7 @@ get_stream_tcb(
     si->this_stream.data_count = 0;
     si->pnext = NULL;
     si->stream_id = streamid;
+    ++thisdir->stream_count;
 
     return si;
 }
@@ -1998,10 +2003,8 @@ dosctptrace(
             void *tmp = pchunk;
             tt_uint16* pstream_id = tmp + 8;
             stream_id = ntohs(*pstream_id);
-            printf("StreamID: %d, ", stream_id);
             thisstream = get_stream_tcb(thisdir, stream_id);
             ++thisstream->this_stream.data_count;
-            printf("Data Count: %d\n", thisstream->this_stream.data_count);
         }
         else if(INIT_SET(pchunk)){++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
@@ -2046,7 +2049,6 @@ dosctptrace(
             pchunkinsa = pchunktemp + 8;
             eff_win = ntohl(*pchunkinsa);
             
-            //printf("%d \n" ,ntohl(*pchunkinsa));
             
             
             /* N.B., the window_scale stored for the connection DURING 3way */
