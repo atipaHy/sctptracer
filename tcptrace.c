@@ -1125,7 +1125,7 @@ for other packet types, I just don't have a place to test them\n\n");
         Bool SCTP = FALSE;
 	ret = getsctp (pip, &psctp, &plast);
         if(ret < 0){
-            ret = gettcp (pip, &ptcp, &plast);
+            //ret = gettcp (pip, &ptcp, &plast);
             global_sctp = 0;
         }
         else

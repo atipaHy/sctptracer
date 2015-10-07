@@ -139,6 +139,29 @@ ConnReset(
 }
 
 /*SCTP specific funcions */
+
+data_info   
+GetDataInfo(
+    tcb *thisdir,
+    tt_uint16 streamid)
+{
+    stream_info* current_stream;
+    current_stream = thisdir->stream_list;
+    data_info not_found;
+    not_found.data_count = 0;
+    
+    if(current_stream == NULL){
+        return not_found;
+    }
+    while(current_stream != NULL){
+        if(current_stream->stream_id == streamid)   {return current_stream->this_stream;}
+        
+        current_stream = current_stream->pnext;
+    }
+
+    return not_found;
+}
+
 u_int
 InitCount(
     tcp_pair *ptp)
@@ -183,14 +206,14 @@ ConnAbort(
 u_llong
 UniqueStreamCounter(
     tcp_pair *ptp,
-    stream_info *unique_stream_list)
+    stream_info **unique_stream_list)
 {
     u_llong unique = ptp->a2b.stream_count;
     u_llong unique2 = ptp->b2a.stream_count;
     stream_info *b2aTemp = ptp->b2a.stream_list;
     stream_info *a2bTemp = ptp->a2b.stream_list;
     
-    stream_info *last = unique_stream_list;
+    stream_info *last;
     
     while(a2bTemp != NULL){
         b2aTemp = ptp->b2a.stream_list;
@@ -201,16 +224,18 @@ UniqueStreamCounter(
             }
             b2aTemp = b2aTemp->pnext;
         }
-        if (unique_stream_list == NULL ){
-            unique_stream_list->pnext = NULL;
-            unique_stream_list->stream_id = a2bTemp->stream_id;
+        if (*unique_stream_list == NULL ){
+            *unique_stream_list = malloc(sizeof(stream_info));
+            (*unique_stream_list)->pnext = NULL;
+            (*unique_stream_list)->stream_id = a2bTemp->stream_id;
+            last = *unique_stream_list;
         }
         else{
             stream_info *si = malloc(sizeof(stream_info));
             last->pnext = si;
             si->stream_id = a2bTemp->stream_id;
             si->pnext = NULL;
-            last = si;            
+            last = si;
         }
         a2bTemp = a2bTemp->pnext;
     }
@@ -696,7 +721,7 @@ tcp_pair *ptp)
     char *host1 = pab->host_letter;
     char *host2 = pba->host_letter;
     char bufl[40],bufr[40];
-    stream_info *unique_stream_list = malloc(sizeof(stream_info));
+    stream_info *unique_stream_list = NULL;
     
     /*print which print-function we are using*/
     printf("\n----------------SCTP-PRINT----------------\n");
@@ -751,7 +776,7 @@ tcp_pair *ptp)
        fprintf(stdout,"\telapsed time:  %s\n", elapsed2str(etime));
        
        fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
-       fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, unique_stream_list));
+       fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list));
        
        fprintf(stdout,"\tfilename:      %s\n", ptp->filename);
        
@@ -1000,10 +1025,18 @@ tcp_pair *ptp)
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
-    //fprintf("\nStream:%d", );
-    while(unique_stream_list != NULL){printf("\n****%d****\n", unique_stream_list->stream_id);unique_stream_list = unique_stream_list->pnext;}
-    //fprintf(stdout,"   %s->%s:			                 %s->%s:\n", host1,host2,host2,host1);
-    //StatLineI("total chunks","", pab->chunk_count, pba->chunk_count);
+    stream_info *temp_stream_list = unique_stream_list;
+    while(temp_stream_list != NULL){
+        printf("\nStream: %d\n", temp_stream_list->stream_id);
+        fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
+	       host1,host2,host2,host1);
+        StatLineI("Data chunks","", GetDataInfo(pab, temp_stream_list->stream_id).data_count, 
+                GetDataInfo(pba, temp_stream_list->stream_id).data_count);
+        StatLineI("Data bytes","", GetDataInfo(pab, temp_stream_list->stream_id).data_bytes, 
+                GetDataInfo(pba, temp_stream_list->stream_id).data_bytes);
+        temp_stream_list = temp_stream_list->pnext;
+    }
+    unique_stream_list = NULL;
     
     if (print_rtt) {
         if(!(csv || tsv || (sv != NULL)))

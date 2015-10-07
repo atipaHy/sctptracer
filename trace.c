@@ -1846,10 +1846,11 @@ get_stream_tcb(
     current_stream = thisdir->stream_list;
     
     if(current_stream == NULL){
-        //printf("First case\n");
+        printf("First case\n");
         stream_info* si = malloc(sizeof(stream_info));
         thisdir->stream_list = si;
         si->this_stream.data_count = 0;
+        si->this_stream.data_bytes = 0;
         si->pnext = NULL;
         si->stream_id = streamid;
         ++thisdir->stream_count;
@@ -1859,7 +1860,7 @@ get_stream_tcb(
     while(current_stream != NULL){
         //printf("%d = %d\n", streamid, current_stream->stream_id);
         if(current_stream->stream_id == streamid)
-        {//printf("streamid found\n");
+        {printf("streamid found\n");
             return current_stream; }
         if(current_stream->pnext != NULL)
             last_stream = last_stream->pnext;
@@ -1870,6 +1871,7 @@ get_stream_tcb(
     stream_info* si = malloc(sizeof(stream_info));
     last_stream->pnext = si;
     si->this_stream.data_count = 0;
+    si->this_stream.data_bytes = 0;
     si->pnext = NULL;
     si->stream_id = streamid;
     ++thisdir->stream_count;
@@ -2270,6 +2272,7 @@ dosctptrace(
             thisdir->data_pkts += 1;
             sctp_data_length = ntohs(*chunklenghtt)-16;
             thisdir->data_bytes += sctp_data_length;
+            thisstream->this_stream.data_bytes += sctp_data_length;
             
             tt_uint32* tsn = tmp222 + 4;
             th_seq = ntohl(*tsn);
