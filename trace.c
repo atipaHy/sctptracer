@@ -1851,6 +1851,9 @@ get_stream_tcb(
         thisdir->stream_list = si;
         si->this_stream.data_count = 0;
         si->this_stream.data_bytes = 0;
+        si->this_stream.unique_bytes = 0;
+        si->this_stream.rexmit_bytes = 0;
+        si->this_stream.rexmit_pkts = 0;
         si->pnext = NULL;
         si->stream_id = streamid;
         ++thisdir->stream_count;
@@ -1872,6 +1875,9 @@ get_stream_tcb(
     last_stream->pnext = si;
     si->this_stream.data_count = 0;
     si->this_stream.data_bytes = 0;
+    si->this_stream.unique_bytes = 0;
+    si->this_stream.rexmit_bytes = 0;
+    si->this_stream.rexmit_pkts = 0;
     si->pnext = NULL;
     si->stream_id = streamid;
     ++thisdir->stream_count;
@@ -2351,11 +2357,16 @@ dosctptrace(
             /* rexmit function for sctp only tell us if chunk was
                rexmitted not how many bytes that were, if the chunk
                was rexmitted all data in the chunk was. */
-            if(rexmit(thisdir,start, len, &out_order))
+            if(rexmit(thisdir,start, len, &out_order)){
                 retrans_cnt = retrans_num_bytes = sctp_data_length;
-            else
+                thisstream->this_stream.rexmit_pkts++;
+            }
+            else{
+                thisstream->this_stream.unique_bytes += sctp_data_length; 
                 thisdir->unique_bytes += sctp_data_length;
+            }
            
+            thisstream->this_stream.rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             
             if (out_order)
