@@ -1916,6 +1916,9 @@ dosctptrace(
     u_long          eff_win;	/* window after scaling */
     seqnum          old_this_windowend; /* for graphing */
     ptp_ptr         *sctp_ptr = NULL;
+    enum t_ack	sack_type=NORMAL; /* how should we draw the ACK */
+    tcp_seq	th_ack;
+    
     
     /* make sure we have enough of the packet */
     if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
@@ -2376,7 +2379,20 @@ dosctptrace(
 
 
     ///////////////////////////////////////
-    
+              /*Christos rtt fck/*
+    ///////////////////////////////////////
+    /* do rtt stats */
+    if (SACK_SET(pchunk)) {
+	sack_type = sack_in(otherdir,th_ack,sctp_data_length,eff_win);
+
+	if ( (th_ack == (otherdir->syn+1)) &&
+		 (otherdir->syn_count == 1) )
+		 otherdir->rtt_3WHS=otherdir->rtt_last; 
+		 /* otherdir->rtt_last was set in the call to ack_in() */
+	
+        otherdir->lastackno = th_ack;	
+    }
+    ///////////////////////////////////////
     
     
     

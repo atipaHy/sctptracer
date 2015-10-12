@@ -577,6 +577,138 @@ rtt_retrans (tcb * ptcb,
 }
 
 
+//////////////////////////////////////
+/*Christos sack_in fck*/
+//////////////////////////////////////
+enum t_ack
+sack_in (tcb * ptcb,
+	seqnum sack,
+	unsigned sctp_data_length,
+	u_long eff_win)
+{
+    quadrant *pquad;
+    quadrant *pquad_prev;
+    segment *pseg;
+    Bool changed_one = FALSE;
+    Bool intervening_xmits = FALSE;
+    timeval last_xmit = { 0, 0 };
+    enum t_ack ret = 0;
+
+    enum dup_ack_handling { BSD_VERSION = 1, /* Handling of duplicate ack's
+						based on the specifications of
+						BSD code */
+	LEGACY_VERSION = 2  /* Handling of duplicate ack's according to the 
+			       old versions of "tcptrace" */
+    };
+    enum dup_ack_handling dup_ack_type;	/* default type is the code based on
+					   BSD specifications */
+
+
+    /* check each segment in the segment list for the PREVIOUS quadrant */
+    pquad = whichquad (ptcb->ss, sack);
+    pquad_prev = pquad->prev;
+    for (pseg = pquad_prev->seglist_head; pseg != NULL; pseg = pseg->next) {
+	if (!pseg->acked) {
+	    ++pseg->acked;
+	    changed_one = TRUE;
+	    ++ptcb->rtt_cumack;
+
+	    /* keep track of the newest transmission */
+	    if (tv_gt (pseg->time, last_xmit))
+		last_xmit = pseg->time;
+	}
+    }
+    if (changed_one)
+	collapse_quad (pquad_prev);
+
+    /* check each segment in the segment list for the CURRENT quadrant */
+    changed_one = FALSE;
+    for (pseg = pquad->seglist_head; pseg != NULL; pseg = pseg->next) {
+	if (sack <= pseg->seq_firstbyte) {
+	    /* doesn't cover anything else on the list */
+	    break;
+	}
+
+	/* keep track of the newest transmission */
+	if (tv_gt (pseg->time, last_xmit))
+	    last_xmit = pseg->time;
+
+	/* (ELSE) ACK covers this sequence */
+	if (pseg->acked) {
+	    /* default will be the BSD version, it can be changed by giving 
+	       '--turn_off_BSD_dupack' switch */
+	    dup_ack_type = (dup_ack_handling) ? BSD_VERSION : LEGACY_VERSION;
+
+	    /* default type is the specifications based on BSD code */
+	    switch (dup_ack_type) {
+	    case LEGACY_VERSION:
+		if (sack == (pseg->seq_lastbyte + 1)) {
+		    ++pseg->acked;	/* already acked this one */
+		    ++ptcb->rtt_dupack;	/* one more duplicate ack */
+		    ret = CUMUL;
+		    if (pseg->acked == 4) {
+			/* some people say these CAN'T have data */
+			if ((sctp_data_length == 0)
+			    || triple_dupack_allows_data) {
+			    ++ptcb->rtt_triple_dupack;
+			    ret = TRIPLE;
+			}
+		    }
+		}
+		break;
+	    case BSD_VERSION:
+		/* For an acknowledgement to be considered as duplicate ACK in 
+		   BSD version, following rules must be followed:
+		   1) the received segment should contain the biggest ACK TCP 
+		   has seen,
+		   2) the length of the segment containing dup ack should be 0,
+		   3) advertised window in this segment should not change,
+		   4) and there must be some outstanding data */
+
+		if ((sack == (pseg->seq_lastbyte + 1)) &&
+		      (sack == ptcb->ptwin->ack) &&
+		      (sctp_data_length == 0) &&
+		      (eff_win == ptcb->ptwin->win_last) &&
+		      (ptcb->owin_tot > 0)) {	
+		    ++ptcb->rtt_dupack;
+		    ret = CUMUL;
+
+		    /* already acked this one */
+		    ++pseg->acked;
+		    if (pseg->acked == 4) {
+			++ptcb->rtt_triple_dupack;
+			ret = TRIPLE;
+		    }
+		} else
+		    pseg->acked = 1;	/* received segment is not pure
+					   duplicate acknowledgement */
+	    }
+	    continue;
+	}
+	/* ELSE !acked */
+
+	++pseg->acked;
+	changed_one = TRUE;
+
+	if (sack == (pseg->seq_lastbyte + 1)) {
+	    /* if ANY preceding segment was xmitted after this one,
+	       the the RTT sample is invalid */
+	    intervening_xmits = (tv_gt (last_xmit, pseg->time));
+
+	    ret = rtt_ackin (ptcb, pseg, intervening_xmits);
+	} else {
+	    /* cumulatively ACKed */
+	    ++ptcb->rtt_cumack;
+	    ret = CUMUL;
+	}
+    }
+    if (changed_one)
+	collapse_quad (pquad);
+    return (ret);
+}
+//////////////////////////////////////
+
+
 enum t_ack
 ack_in (tcb * ptcb,
 	seqnum ack,
