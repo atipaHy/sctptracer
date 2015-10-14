@@ -1846,7 +1846,7 @@ get_stream_tcb(
     current_stream = thisdir->stream_list;
     
     if(current_stream == NULL){
-        printf("First case\n");
+        /*printf("First case\n");*/
         stream_info* si = malloc(sizeof(stream_info));
         thisdir->stream_list = si;
         si->datainfo.data_count = 0;
@@ -1863,7 +1863,7 @@ get_stream_tcb(
     while(current_stream != NULL){
         //printf("%d = %d\n", streamid, current_stream->stream_id);
         if(current_stream->stream_id == streamid)
-        {printf("streamid found\n");
+        {/*printf("streamid found\n");*/
             return current_stream; }
         if(current_stream->pnext != NULL)
             last_stream = last_stream->pnext;
@@ -2008,6 +2008,13 @@ dosctptrace(
     /* read all chunkhdrs within packet */
     while((int)pchunk < (int)eopacket)
     {
+        
+        /* chunklength with padding (multiple of 4 bytes) */
+        int chunklength = ntohs(pchunk->th_chunklength);
+        while(chunklength%4!=0)
+            chunklength++;
+        
+        
         /* count chunktypes */
         if(DATA_SET(pchunk)){
             ++thisdir->data_count;
@@ -2017,7 +2024,46 @@ dosctptrace(
             thisstream = get_stream_tcb(thisdir, stream_id);
             ++thisstream->datainfo.data_count;
         }
-        else if(INIT_SET(pchunk)){++thisdir->init_count;}
+        else if(INIT_SET(pchunk)){
+            
+            ++thisdir->init_count;
+//            void *eoc = pchunk;
+//            eoc += chunklength;
+//            
+//            void *ppara = pchunk;
+//            tt_uint16 *pptype = ppara = ppara + 20;
+//            
+//            while((int)ppara < (int)eoc)
+//            {
+//                pptype = ppara;
+//                tt_uint16 type = ntohs(*pptype);
+//                tt_uint16 *pplength = ppara + 2;
+//                tt_uint16 plength = ntohs(*pplength);
+//                
+//                /* multihomed ipv4adresses */
+//                if(type == 5)
+//                {
+//                    
+//                    
+//                    tt_uint32 *pip4 = ppara + 4;
+//                    void *eop = ppara + plength;
+//                    
+//                    while((int)pip4 < (int)eop)
+//                    {
+//                        tt_uint32 ipv4 = ntohl(*pip4);
+//                        printf("ipv4: %d\n", ipv4);
+//                        
+//                        void *tmp = pip4;
+//                        pip4 = tmp + 4;
+//                        
+//                    }
+//                    
+//                }
+//                ppara += plength;
+//            }
+            
+            
+        }
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
         else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
@@ -2035,10 +2081,7 @@ dosctptrace(
         else {++thisdir->other_count;}
         ++thisdir->chunk_count;
 
-        /* chunklength with padding (multiple of 4 bytes) */
-        int chunklength = ntohs(pchunk->th_chunklength);
-        while(chunklength%4!=0)
-            chunklength++;
+        
         
         
         /* idle-time stats */
