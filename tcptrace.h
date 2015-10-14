@@ -295,7 +295,7 @@ typedef struct seqspace {
 typedef struct data_info{
     u_llong     data_count;
     u_llong     data_bytes;
-    u_llong	unique_bytes;	/* bytes sent (-FIN/SYN), excluding rexmits */
+    u_llong	unique_bytes;	
     u_llong	rexmit_bytes;
     u_llong	rexmit_pkts;
 }data_info;
@@ -304,7 +304,7 @@ typedef struct stream_info stream_info;
 
 typedef struct stream_info{
     tt_uint16       stream_id;
-    data_info       this_stream;
+    data_info       datainfo;
     stream_info*    pnext;
 }stream_info; 
 

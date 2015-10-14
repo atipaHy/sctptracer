@@ -1849,11 +1849,11 @@ get_stream_tcb(
         printf("First case\n");
         stream_info* si = malloc(sizeof(stream_info));
         thisdir->stream_list = si;
-        si->this_stream.data_count = 0;
-        si->this_stream.data_bytes = 0;
-        si->this_stream.unique_bytes = 0;
-        si->this_stream.rexmit_bytes = 0;
-        si->this_stream.rexmit_pkts = 0;
+        si->datainfo.data_count = 0;
+        si->datainfo.data_bytes = 0;
+        si->datainfo.unique_bytes = 0;
+        si->datainfo.rexmit_bytes = 0;
+        si->datainfo.rexmit_pkts = 0;
         si->pnext = NULL;
         si->stream_id = streamid;
         ++thisdir->stream_count;
@@ -1873,11 +1873,11 @@ get_stream_tcb(
     //printf("Add at end\n");
     stream_info* si = malloc(sizeof(stream_info));
     last_stream->pnext = si;
-    si->this_stream.data_count = 0;
-    si->this_stream.data_bytes = 0;
-    si->this_stream.unique_bytes = 0;
-    si->this_stream.rexmit_bytes = 0;
-    si->this_stream.rexmit_pkts = 0;
+    si->datainfo.data_count = 0;
+    si->datainfo.data_bytes = 0;
+    si->datainfo.unique_bytes = 0;
+    si->datainfo.rexmit_bytes = 0;
+    si->datainfo.rexmit_pkts = 0;
     si->pnext = NULL;
     si->stream_id = streamid;
     ++thisdir->stream_count;
@@ -2015,7 +2015,7 @@ dosctptrace(
             tt_uint16* pstream_id = tmp + 8;
             stream_id = ntohs(*pstream_id);
             thisstream = get_stream_tcb(thisdir, stream_id);
-            ++thisstream->this_stream.data_count;
+            ++thisstream->datainfo.data_count;
         }
         else if(INIT_SET(pchunk)){++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
@@ -2035,7 +2035,7 @@ dosctptrace(
         else {++thisdir->other_count;}
         ++thisdir->chunk_count;
 
-        /* chunklength with padding */
+        /* chunklength with padding (multiple of 4 bytes) */
         int chunklength = ntohs(pchunk->th_chunklength);
         while(chunklength%4!=0)
             chunklength++;
@@ -2054,21 +2054,12 @@ dosctptrace(
         /* with scaling */
         if (SACK_SET(pchunk) || INIT_SET(pchunk)) {
             
-            int* pchunkinsa;
-            void* pchunktemp;
-            pchunktemp = pchunk;
-            pchunkinsa = pchunktemp + 8;
-            eff_win = ntohl(*pchunkinsa);
+            int* inttmp;
+            void* tmp;
+            tmp = pchunk;
+            inttmp = tmp + 8;
+            eff_win = ntohl(*inttmp);
             
-            
-            
-            /* N.B., the window_scale stored for the connection DURING 3way */
-            /* handshaking is the REQUESTED scale.  It's only valid if both */
-            /* sides request scaling.  AFTER we've seen both SYNs, that field */
-            /* is reset (above) to contain zero.  Note that if we */
-            /* DIDN'T see the SYNs, the windows will be off. */
-            /* Jamshid: Remember that the window is never scaled in SYN */
-            /* packets, as per RFC 1323. */
             if (thisdir->f1323_ws && otherdir->f1323_ws && !INIT_SET(pchunk))
               eff_win <<= thisdir->window_scale;
         } else {
@@ -2081,11 +2072,11 @@ dosctptrace(
         end = 0;
         if(DATA_SET(pchunk))
         {
-            int* ptmp;
-            void* ptmp2;
-            ptmp2 = pchunk;
-            ptmp = ptmp2 + 4;
-            start = ntohl(*ptmp);
+            int* inttmp;
+            void* tmp;
+            tmp = pchunk;
+            inttmp = tmp + 4;
+            start = ntohl(*inttmp);
             end = start;
         }
 
@@ -2252,8 +2243,8 @@ dosctptrace(
             numduptsn = ntohs(*ptofield2);
         }
     
-        /* NOW, unless BOTH sides asked for window scaling in their SYN	*/
-        /* segments, we aren't using window scaling */
+        /* NOW, unless BOTH sides asked for window scaling	*/
+        /* we aren't using window scaling */
         if (!INIT_SET(pchunk) &&
             ((!thisdir->f1323_ws) || (!otherdir->f1323_ws))) {
             thisdir->window_scale = otherdir->window_scale = 0;
@@ -2273,17 +2264,17 @@ dosctptrace(
     
         /* do data stats */
         if (DATA_SET(pchunk)) {
-            tt_uint16* chunklenghtt;  
-            void* tmp222;   
-            tmp222 = pchunk;
-            chunklenghtt = tmp222 + 2;
+            tt_uint16* inttmp;  
+            void* tmp;   
+            tmp = pchunk;
+            inttmp = tmp + 2;
             
             thisdir->data_pkts += 1;
-            sctp_data_length = ntohs(*chunklenghtt)-16;
+            sctp_data_length = ntohs(*inttmp)-16;
             thisdir->data_bytes += sctp_data_length;
-            thisstream->this_stream.data_bytes += sctp_data_length;
+            thisstream->datainfo.data_bytes += sctp_data_length;
             
-            tt_uint32* tsn = tmp222 + 4;
+            tt_uint32* tsn = tmp + 4;
             th_seq = ntohl(*tsn);
         }
         if (ZERO_TIME(&thisdir->first_data_time))
@@ -2362,14 +2353,14 @@ dosctptrace(
                was rexmitted all data in the chunk was. */
             if(rexmit(thisdir,start, len, &out_order)){
                 retrans_cnt = retrans_num_bytes = sctp_data_length;
-                thisstream->this_stream.rexmit_pkts++;
+                thisstream->datainfo.rexmit_pkts++;
             }
             else{
-                thisstream->this_stream.unique_bytes += sctp_data_length; 
+                thisstream->datainfo.unique_bytes += sctp_data_length; 
                 thisdir->unique_bytes += sctp_data_length;
             }
            
-            thisstream->this_stream.rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
+            thisstream->datainfo.rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
             
             if (out_order)

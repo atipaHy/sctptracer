@@ -154,7 +154,7 @@ GetDataInfo(
         return not_found;
     }
     while(current_stream != NULL){
-        if(current_stream->stream_id == streamid)   {return current_stream->this_stream;}
+        if(current_stream->stream_id == streamid)   {return current_stream->datainfo;}
         
         current_stream = current_stream->pnext;
     }
