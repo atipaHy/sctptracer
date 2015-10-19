@@ -1044,7 +1044,6 @@ FindTTPsctp(
        	    
 	if (dir == A2B || dir == B2A) {
 	    /* OK, this looks good, suck it into memory */
-	  
 	    tcb *thisdir;
 	    tcb *otherdir;
 	    tcp_pair *ptp;
@@ -1885,6 +1884,65 @@ get_stream_tcb(
     return si;
 }
 
+void 
+get_assoc_ip(chunkhdr *pchunk, int chunklength)
+{
+    void *eoc = pchunk;
+    eoc += chunklength;
+
+    void *ppara = pchunk;
+    tt_uint16 *pptype = ppara = ppara + 20;
+
+    while((int)ppara < (int)eoc)
+    {
+        pptype = ppara;
+        tt_uint16 type = ntohs(*pptype);
+        tt_uint16 *pplength = ppara + 2;
+        tt_uint16 plength = ntohs(*pplength);
+
+        while(plength%4 != 0)   plength++;
+
+        /* multihomed ipv4adresses */
+        if(type == 5)
+        {
+
+
+            unsigned char *pip4 = ppara + 4;
+            void *eop = ppara + plength;
+
+            while((int)pip4 < (int)eop)
+            {
+                char ipv4[15];
+                char buf[5];
+                void *tmp = pip4;
+                
+                sprintf(buf,"%u.", *pip4);
+                strcpy(ipv4, buf);
+
+                tmp = pip4 = tmp + 1;
+                sprintf(buf,"%u.", *pip4);
+                strcat(ipv4, buf);
+
+
+                tmp = pip4 = tmp + 1;
+                sprintf(buf,"%u.", *pip4);
+                strcat(ipv4, buf);
+
+
+                tmp = pip4 = tmp + 1;
+                sprintf(buf,"%u", *pip4);
+                strcat(ipv4, buf);
+        
+                printf("ipv4full: %s\n", ipv4);
+
+                pip4 = tmp + 4;
+            }
+
+        }
+        ppara += plength;
+    }
+}
+
 tcp_pair *
 dosctptrace(
     struct ip *pip,
@@ -2024,47 +2082,8 @@ dosctptrace(
             thisstream = get_stream_tcb(thisdir, stream_id);
             ++thisstream->datainfo.data_count;
         }
-        else if(INIT_SET(pchunk)){
-            
-            ++thisdir->init_count;
-//            void *eoc = pchunk;
-//            eoc += chunklength;
-//            
-//            void *ppara = pchunk;
-//            tt_uint16 *pptype = ppara = ppara + 20;
-//            
-//            while((int)ppara < (int)eoc)
-//            {
-//                pptype = ppara;
-//                tt_uint16 type = ntohs(*pptype);
-//                tt_uint16 *pplength = ppara + 2;
-//                tt_uint16 plength = ntohs(*pplength);
-//                
-//                /* multihomed ipv4adresses */
-//                if(type == 5)
-//                {
-//                    
-//                    
-//                    tt_uint32 *pip4 = ppara + 4;
-//                    void *eop = ppara + plength;
-//                    
-//                    while((int)pip4 < (int)eop)
-//                    {
-//                        tt_uint32 ipv4 = ntohl(*pip4);
-//                        printf("ipv4: %d\n", ipv4);
-//                        
-//                        void *tmp = pip4;
-//                        pip4 = tmp + 4;
-//                        
-//                    }
-//                    
-//                }
-//                ppara += plength;
-//            }
-            
-            
-        }
-        else if(INITACK_SET(pchunk)){++thisdir->init_ack_count;}
+        else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength); ++thisdir->init_count;}
+        else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength); ++thisdir->init_ack_count;}
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
         else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
         else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
