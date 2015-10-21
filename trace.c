@@ -520,6 +520,8 @@ NewTTPsctp(
     /* grab the address from this packet */
     CopyAddr(&ptp->addr_pair,
 	     pip, ntohs(psctp->th_sport), ntohs(psctp->th_dport));
+    
+    ptp->addr_pair.next = NULL;
 
     ptp->a2b.time.tv_sec = -1;
     ptp->b2a.time.tv_sec = -1;
@@ -1885,8 +1887,13 @@ get_stream_tcb(
 }
 
 void 
-get_assoc_ip(chunkhdr *pchunk, int chunklength)
+get_assoc_ip(
+    chunkhdr *pchunk, 
+    int chunklength,
+    tcb *thisdir,
+    int isINIT)
 {
+    tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
     void *eoc = pchunk;
     eoc += chunklength;
 
@@ -1899,7 +1906,9 @@ get_assoc_ip(chunkhdr *pchunk, int chunklength)
         tt_uint16 type = ntohs(*pptype);
         tt_uint16 *pplength = ppara + 2;
         tt_uint16 plength = ntohs(*pplength);
-
+        
+        
+        /*PADDING*/
         while(plength%4 != 0)   plength++;
 
         /* multihomed ipv4adresses */
@@ -1907,34 +1916,47 @@ get_assoc_ip(chunkhdr *pchunk, int chunklength)
         {
 
 
-            unsigned char *pip4 = ppara + 4;
+            uint32_t *pip4 = ppara + 4;
             void *eop = ppara + plength;
-
+            /*Loop within the parameter for possible multiple ips*/
             while((int)pip4 < (int)eop)
             {
-                char ipv4[15];
-                char buf[5];
                 void *tmp = pip4;
                 
-                sprintf(buf,"%u.", *pip4);
-                strcpy(ipv4, buf);
+                uint32_t ipv4 = *pip4;
 
-                tmp = pip4 = tmp + 1;
-                sprintf(buf,"%u.", *pip4);
-                strcat(ipv4, buf);
-
-
-                tmp = pip4 = tmp + 1;
-                sprintf(buf,"%u.", *pip4);
-                strcat(ipv4, buf);
-
-
-                tmp = pip4 = tmp + 1;
-                sprintf(buf,"%u", *pip4);
-                strcat(ipv4, buf);
-        
-                printf("ipv4full: %s\n", ipv4);
-
+                if(isINIT)
+                {
+                    while(assoc_pair->a_address.un.ip4.s_addr != ipv4)
+                    {
+                        if(assoc_pair->next == NULL)
+                        {
+                            tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
+                            assoc_pair->next = pair;
+                            pair->a_address.addr_vers = 4;
+                            pair->next = NULL;
+                            pair->a_address.un.ip4.s_addr = ipv4;
+                        }
+                        assoc_pair = assoc_pair->next;
+                    }
+                }
+                else
+                {
+                    while(assoc_pair->b_address.un.ip4.s_addr != ipv4)
+                    {
+                        if(assoc_pair->next == NULL)
+                        {
+                            tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
+                            assoc_pair->next = pair;
+                            pair->a_address.addr_vers = 4;
+                            pair->next = NULL;
+                            pair->b_address.un.ip4.s_addr = ipv4;
+                        }
+                        assoc_pair = assoc_pair->next;
+                    }
+                }
+                
+                
                 pip4 = tmp + 4;
             }
 
@@ -2082,8 +2104,15 @@ dosctptrace(
             thisstream = get_stream_tcb(thisdir, stream_id);
             ++thisstream->datainfo.data_count;
         }
-        else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength); ++thisdir->init_count;}
-        else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength); ++thisdir->init_ack_count;}
+        else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 1); ++thisdir->init_count;}
+        else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 0); ++thisdir->init_ack_count;
+//        tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
+//            do
+//            {
+//                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
+//                assoc_pair = assoc_pair->next;
+//            }while(assoc_pair->next != NULL);
+        }
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
         else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
         else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
@@ -2098,10 +2127,7 @@ dosctptrace(
         else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_ack_count;}
         else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
         else {++thisdir->other_count;}
-        ++thisdir->chunk_count;
-
-        
-        
+        ++thisdir->chunk_count;        
         
         /* idle-time stats */
         if (!ZERO_TIME(&thisdir->last_time)) {
