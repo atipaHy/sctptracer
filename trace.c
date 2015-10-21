@@ -2124,7 +2124,7 @@ dosctptrace(
         else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
         else if(ECNE_SET(pchunk)){++thisdir->ecne_count;}
         else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_count;}
-        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_ack_count;}
+        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_complete_count;}
         else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
         else {++thisdir->other_count;}
         ++thisdir->chunk_count;        
