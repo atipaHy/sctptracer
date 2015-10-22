@@ -192,7 +192,11 @@ int
 SctpConnComplete(
     tcp_pair *ptp)
 {
-    return(InitCount(ptp) >= 2 && ShutdownCount(ptp) >= 2);
+    tcb *pab = &ptp->a2b;
+    tcb *pba = &ptp->b2a;
+    
+    return((pab->shutdown_complete_count >= 1 || 
+            pba->shutdown_complete_count >= 1)?1:0);
 }
 
 
