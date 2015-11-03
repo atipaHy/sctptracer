@@ -63,7 +63,7 @@ static char const GCC_UNUSED rcsid[] =
 
 
 /* locally global variables */
-static int tcp_packet_count = 0;
+static int sctp_packet_count = 0;
 static int search_count = 0;
 static int active_conn_count = 0;
 static int closed_conn_count = 0;
@@ -77,10 +77,11 @@ static int tline_left  = 0; /* left and right time lines for the time line chart
 static int tline_right = 0;
 
 /* provided globals  */
+int num_sctp_pairs = -1;
 int num_tcp_pairs = -1;	/* how many pairs we've allocated */
 tcp_pair **ttp = NULL;	/* array of pointers to allocated pairs */
 int max_tcp_pairs = 64; /* initial value, automatically increases */
-u_long tcp_trace_count = 0;
+u_long sctp_trace_count = 0;
 
 
 /* local routine definitions */
@@ -491,7 +492,240 @@ SameConn(
    return(*pdir != 0);
 }
 
+static tcp_pair *
+NewTTPsctp(
+    struct ip *pip,
+    struct sctphdr *psctp)
+{
+    char title[210];
+    tcp_pair *ptp;
 
+    if (0) {
+      printf("trace.c:NewTTP() calling MakeTcpPair()\n");
+    }
+    ptp = MakeTcpPair();
+    ++num_sctp_pairs;
+
+    if (!run_continuously) {
+      /* make a new one, if possible */
+      if ((num_sctp_pairs+1) >= max_tcp_pairs) {
+	MoreTcpPairs(num_sctp_pairs+1);
+      }
+      /* create a new TCP pair record and remember where you put it */
+      ttp[num_sctp_pairs] = ptp;
+      ptp->ignore_pair = ignore_pairs[num_sctp_pairs];
+    }
+
+
+    /* grab the address from this packet */
+    CopyAddr(&ptp->addr_pair,
+	     pip, ntohs(psctp->th_sport), ntohs(psctp->th_dport));
+    
+    ptp->addr_pair.next = NULL;
+
+    ptp->a2b.time.tv_sec = -1;
+    ptp->b2a.time.tv_sec = -1;
+    
+    ptp->a2b.stream_count = 0;
+    ptp->b2a.stream_count = 0;
+
+    ptp->a2b.host_letter = strdup(NextHostLetter());
+    ptp->b2a.host_letter = strdup(NextHostLetter());
+
+    ptp->a2b.ptp = ptp;
+    ptp->b2a.ptp = ptp;
+    ptp->a2b.ptwin = &ptp->b2a;
+    ptp->b2a.ptwin = &ptp->a2b;
+
+    /* fill in connection name fields */
+    ptp->a_hostname = strdup(HostName(ptp->addr_pair.a_address));
+    ptp->a_portname = strdup(ServiceName(ptp->addr_pair.a_port));
+    ptp->a_endpoint =
+	strdup(EndpointName(ptp->addr_pair.a_address,
+			    ptp->addr_pair.a_port));
+    ptp->b_hostname = strdup(HostName(ptp->addr_pair.b_address));
+    ptp->b_portname = strdup(ServiceName(ptp->addr_pair.b_port));
+    ptp->b_endpoint = 
+	strdup(EndpointName(ptp->addr_pair.b_address,
+			    ptp->addr_pair.b_port));
+
+    /* make the initial guess that each side is a reno tcp */
+    /* this might actually be a poor thing to do in the sense that
+       we could be looking at a Tahoe trace ... but the only side
+       effect for the moment is that the LEAST estimate may be
+       busted, although it very well may not be */
+    ptp->a2b.tcp_strain = TCP_RENO;
+    ptp->b2a.tcp_strain = TCP_RENO;
+
+    ptp->a2b.LEAST = ptp->b2a.LEAST = 0;
+    ptp->a2b.in_rto = ptp->b2a.in_rto = FALSE;
+
+    /* init time sequence graphs */
+    ptp->a2b.tsg_plotter = ptp->b2a.tsg_plotter = NO_PLOTTER;
+    if (graph_tsg && !ptp->ignore_pair) {
+	if (!ignore_non_comp /*|| (SYN_SET(psctp))*/) {
+	    snprintf(title,sizeof(title),"%s_==>_%s (time sequence graph)",
+		    ptp->a_endpoint, ptp->b_endpoint);
+	    ptp->a2b.tsg_plotter =
+		new_plotter(&ptp->a2b,NULL,title,
+			    graph_time_zero?"relative time":"time",
+			    graph_seq_zero?"sequence offset":"sequence number",
+			    PLOT_FILE_EXTENSION);
+	    snprintf(title,sizeof(title),"%s_==>_%s (time sequence graph)",
+		    ptp->b_endpoint, ptp->a_endpoint);
+	    ptp->b2a.tsg_plotter =
+		new_plotter(&ptp->b2a,NULL,title,
+			    graph_time_zero?"relative time":"time",
+			    graph_seq_zero?"sequence offset":"sequence number",
+			    PLOT_FILE_EXTENSION);
+	    if (graph_time_zero) {
+		/* set graph zero points */
+		plotter_nothing(ptp->a2b.tsg_plotter, current_time);
+		plotter_nothing(ptp->b2a.tsg_plotter, current_time);
+	    }
+	}
+    }
+
+    /* init owin graphs */
+    ptp->a2b.owin_plotter = ptp->b2a.owin_plotter = NO_PLOTTER;
+    if (graph_owin && !ptp->ignore_pair) {
+	if (!ignore_non_comp /*|| (SYN_SET(psctp))*/) {
+	    snprintf(title,sizeof(title),"%s_==>_%s (outstanding data)",
+		    ptp->a_endpoint, ptp->b_endpoint);
+	    ptp->a2b.owin_plotter =
+		new_plotter(&ptp->a2b,NULL,title,
+			    graph_time_zero?"relative time":"time",
+			    "Outstanding Data (bytes)",
+			    OWIN_FILE_EXTENSION);
+	    snprintf(title,sizeof(title),"%s_==>_%s (outstanding data)",
+		    ptp->b_endpoint, ptp->a_endpoint);
+	    ptp->b2a.owin_plotter =
+		new_plotter(&ptp->b2a,NULL,title,
+			    graph_time_zero?"relative time":"time",
+			    "Outstanding Data (bytes)",
+			    OWIN_FILE_EXTENSION);
+	    if (graph_time_zero) {
+		/* set graph zero points */
+		plotter_nothing(ptp->a2b.owin_plotter, current_time);
+		plotter_nothing(ptp->b2a.owin_plotter, current_time);
+	    }
+	    ptp->a2b.owin_line =
+		new_line(ptp->a2b.owin_plotter, "owin", "red");
+	    ptp->b2a.owin_line =
+		new_line(ptp->b2a.owin_plotter, "owin", "red");
+
+	    if (show_rwinline) {
+	      ptp->a2b.rwin_line =
+	        new_line(ptp->a2b.owin_plotter, "rwin", "yellow");
+	      ptp->b2a.rwin_line =
+	        new_line(ptp->b2a.owin_plotter, "rwin", "yellow");
+	    }
+	  
+	    ptp->a2b.owin_avg_line =
+		new_line(ptp->a2b.owin_plotter, "avg owin", "blue");
+	    ptp->b2a.owin_avg_line =
+		new_line(ptp->b2a.owin_plotter, "avg owin", "blue");
+	    ptp->a2b.owin_wavg_line =
+		new_line(ptp->a2b.owin_plotter, "wavg owin", "green");
+	    ptp->b2a.owin_wavg_line =
+		new_line(ptp->b2a.owin_plotter, "wavg owin", "green");
+	}
+    }
+
+    /* init time line graphs (Avinash, 2 July 2002) */
+    ptp->a2b.tline_plotter = ptp->b2a.tline_plotter = NO_PLOTTER;
+    if (graph_tline && !ptp->ignore_pair) {
+	if (!ignore_non_comp /*|| (SYN_SET(psctp))*/) {
+	    /* We don't want the standard a2b type name so we will specify
+	     * a filename of type a_b when we call new_plotter.
+	     */ 
+	    char filename[25];
+	    snprintf(filename,sizeof(filename),"%s_%s",
+		     ptp->a2b.host_letter, ptp->a2b.ptwin->host_letter);
+
+	    snprintf(title,sizeof(title),"%s_==>_%s (time line graph)",
+		    ptp->a_endpoint, ptp->b_endpoint);
+	    /* We will keep both the plotters the same since we want all
+	     * segments going in either direction to be plotted on the same
+	     * graph
+	     */ 
+	    ptp->a2b.tline_plotter = ptp->b2a.tline_plotter =
+		new_plotter(&ptp->a2b,filename,title,
+			    "segments",
+			    "relative time",
+			    TLINE_FILE_EXTENSION);
+             
+	    /* Switch the x & y axis types.
+	     * The default is x - timeval, y - unsigned,
+	     * we need x - unsigned, y - dtime.
+	     * Both the plotters are the same so we will
+	     * only call this function once.
+	     */
+	    plotter_switch_axis(ptp->a2b.tline_plotter, TRUE);
+	      
+	    /* set graph zero points */
+	    plotter_nothing(ptp->a2b.tline_plotter, current_time);
+	    plotter_nothing(ptp->b2a.tline_plotter, current_time);
+
+	    /* Some graph initializations 
+	     * Generating a drawing space between x=0-100.
+	     * The time lines will be at x=40 for source, x=60 for destination.
+	     * Rest of the area on either sides will be used to print segment
+	     * information.
+	     * 
+	     *  seg info |----->| 
+	     *           |<-----| seg info
+	     */
+	    tline_left  = 40;
+	    tline_right = 60;
+	    plotter_invisible(ptp->a2b.tline_plotter, current_time, 0);
+	    plotter_invisible(ptp->a2b.tline_plotter, current_time, 100);
+	}
+    }
+   
+   
+    /* init segment size graphs */
+    ptp->a2b.segsize_plotter = ptp->b2a.segsize_plotter = NO_PLOTTER;
+    if (graph_segsize && !ptp->ignore_pair) {
+	snprintf(title,sizeof(title),"%s_==>_%s (segment size graph)",
+		ptp->a_endpoint, ptp->b_endpoint);
+	ptp->a2b.segsize_plotter =
+	    new_plotter(&ptp->a2b,NULL,title,
+			graph_time_zero?"relative time":"time",
+			"segment size (bytes)",
+			SEGSIZE_FILE_EXTENSION);
+	snprintf(title,sizeof(title),"%s_==>_%s (segment size graph)",
+		ptp->b_endpoint, ptp->a_endpoint);
+	ptp->b2a.segsize_plotter =
+	    new_plotter(&ptp->b2a,NULL,title,
+			graph_time_zero?"relative time":"time",
+			"segment size (bytes)",
+			SEGSIZE_FILE_EXTENSION);
+	if (graph_time_zero) {
+	    /* set graph zero points */
+	    plotter_nothing(ptp->a2b.segsize_plotter, current_time);
+	    plotter_nothing(ptp->b2a.segsize_plotter, current_time);
+	}
+	ptp->a2b.segsize_line =
+	    new_line(ptp->a2b.segsize_plotter, "segsize", "red");
+	ptp->b2a.segsize_line =
+	    new_line(ptp->b2a.segsize_plotter, "segsize", "red");
+	ptp->a2b.segsize_avg_line =
+	    new_line(ptp->a2b.segsize_plotter, "avg segsize", "blue");
+	ptp->b2a.segsize_avg_line =
+	    new_line(ptp->b2a.segsize_plotter, "avg segsize", "blue");
+    }
+
+    /* init RTT graphs */
+    ptp->a2b.rtt_plotter = ptp->b2a.rtt_plotter = NO_PLOTTER;
+
+    ptp->a2b.ss = MakeSeqspace();
+    ptp->b2a.ss = MakeSeqspace();
+
+    ptp->filename = cur_filename;
+
+    return(ptp);
+}
 
 static tcp_pair *
 NewTTP(
@@ -753,6 +987,174 @@ static ptp_ptr	*live_conn_list_tail = NULL;
 static ptp_ptr	*closed_conn_list_head = NULL;
 static ptp_ptr	*closed_conn_list_tail = NULL;
 static timeval	last_update_time = {0, 0};
+
+static tcp_pair *
+FindTTPsctp(
+    struct ip *pip,
+    struct sctphdr *psctp,
+    int *pdir,
+    ptp_ptr **sctp_ptr)
+{
+    ptp_snap **pptph_head = NULL;
+    ptp_snap *ptph;
+    tcp_pair_addrblock	tp_in;
+    struct search_efficiency *pse = NULL;
+    unsigned depth = 0;
+    int dir, conn_status;
+    hash hval;
+    *sctp_ptr = NULL;
+
+    if (debug > 10) {
+	printf("trace.c: FindTTP() called\n");
+    }
+
+    /* grab the address from this packet */
+    CopyAddr(&tp_in, pip, ntohs(psctp->th_sport), ntohs(psctp->th_dport));
+
+    /* grab the hash value (already computed by CopyAddr) */
+    hval = tp_in.hash % HASH_TABLE_SIZE;
+
+    pptph_head = &ptp_hashtable[hval];
+
+    if (debug) {
+	/* search efficiency checking */
+	pse = &hashtable_efficiency[hval];
+    }
+   
+    if (pse) {
+	/* search efficiency instrumentation */
+	depth = 0;
+	++pse->num_searches;
+    }
+
+    for (ptph = *pptph_head; ptph; ) {
+	if (debug) {
+	    /* search efficiency instrumentation */
+	    ++search_count;
+	    if (pse) {
+		++depth;
+		++pse->num_comparisons;
+	    }
+	}
+
+	/* See if the current node in the AVL tree hash-bucket 
+	 * is the exact same connection as ourselves,
+	 * either in A2B or B2A directions.
+	 */
+	    
+	dir = WhichDir(&tp_in, &ptph->addr_pair);
+       	    
+	if (dir == A2B || dir == B2A) {
+	    /* OK, this looks good, suck it into memory */
+	    tcb *thisdir;
+	    tcb *otherdir;
+	    tcp_pair *ptp;
+	    if (run_continuously) {
+		ptp_ptr *ptr = (ptp_ptr *)ptph->ptp;
+		ptp = ptr->ptp;
+	    }
+	    else {
+		ptp = (tcp_pair *)ptph->ptp;
+	    }
+	  
+	    /* figure out which direction this packet is going */
+	    if (dir == A2B) {
+		thisdir  = &ptp->a2b;
+		otherdir = &ptp->b2a;
+	    } else {
+		thisdir  = &ptp->b2a;
+		otherdir = &ptp->a2b;
+	    }
+
+	  
+	    if (run_continuously) 
+		(*sctp_ptr) = (ptp_ptr *)ptph->ptp;
+	  
+	    *pdir = dir;
+	    return (ptp);
+	} else {  // WhichDir returned 0, meaning if it exists, it's deeper 
+	    conn_status = AVL_WhichDir(&tp_in,&ptph->addr_pair);	
+	    if (conn_status == LT)
+		ptph = ptph->left;
+	    else if (conn_status == RT)
+		ptph = ptph->right;
+	    else if (!conn_status)  {
+		fprintf(stderr, "WARNING!! AVL_WhichDir() should not return 0 if\n"
+				"\tWhichDir() didn't return A2B or B2A previously\n");
+		break;
+	    }
+	}
+    }
+   
+   
+    /* Didn't find it, make a new one, if possible */
+    if (0) {
+	printf("trace.c:FindTTP() calling MakePtpSnap()\n");
+    }
+    ptph = MakePtpSnap();
+  
+    if (run_continuously) {
+	ptp_ptr *ptr = (ptp_ptr *)MakePtpPtr();
+	ptr->prev = NULL;
+
+	if (live_conn_list_head == NULL) {
+	    ptr->next = NULL;
+	    live_conn_list_head = ptr;
+	    live_conn_list_tail = ptr;
+	}
+	else {
+	    ptr->next = live_conn_list_head;
+	    live_conn_list_head->prev = ptr;
+	    live_conn_list_head = ptr;
+	}
+	ptr->from = ptph;
+	ptr->ptp = NewTTPsctp(pip, psctp);
+	ptph->addr_pair = ptr->ptp->addr_pair;
+	ptph->ptp = (void *)ptr;
+	if (conn_num_threshold) {
+	    active_conn_count++;
+	    if (active_conn_count > max_conn_num) {
+		ptp_ptr *last_ptr = live_conn_list_tail;
+		live_conn_list_tail = last_ptr->prev;
+		live_conn_list_tail->next = NULL;
+		RemoveConn(last_ptr);
+		num_removed_tcp_pairs++;
+		active_conn_count--;
+		FreePtpPtr(last_ptr);
+	    }
+	}
+    }
+    else {
+	tcp_pair *tmp = NewTTPsctp(pip,psctp);
+	ptph->addr_pair = tmp->addr_pair;
+	ptph->ptp = tmp;
+    }
+
+    /* To insert the new connection snapshot into the AVL tree */
+   
+    if (debug > 4)
+	printf("Inserting connection into hashtable:\
+             FindTTP() calling SnapInsert() \n");
+    SnapInsert(pptph_head, ptph);
+   
+    if (pse) {
+	/* search efficiency instrumentation */
+	++pse->num_connections;
+	if (depth > pse->max_depth)
+	    pse->max_depth = depth;
+	if (pse->num_connections > pse->max_connections)
+	    pse->max_connections = pse->num_connections;
+    }
+
+
+    *pdir = A2B;
+    if (run_continuously) {
+	*sctp_ptr = (ptp_ptr *)ptph->ptp;
+	return ((*sctp_ptr)->ptp);
+    }
+    else
+	return (tcp_pair *)(ptph->ptp);
+}
 
 static tcp_pair *
 FindTTP(
@@ -1344,12 +1746,174 @@ RemoveTcpPair(
   FreeTcpPair(ptp);
 }
 
+stream_info *  
+get_stream_tcb(
+    tcb *thisdir,
+    tt_uint16 streamid)
+{
+    stream_info* current_stream;
+    current_stream = thisdir->stream_list;
+    
+    if(current_stream == NULL){
+        /*printf("First case\n");*/
+        stream_info* si = malloc(sizeof(stream_info));
+        thisdir->stream_list = si;
+        si->datainfo.data_count = 0;
+        si->datainfo.data_bytes = 0;
+        si->datainfo.unique_bytes = 0;
+        si->datainfo.rexmit_bytes = 0;
+        si->datainfo.rexmit_pkts = 0;
+        si->pnext = NULL;
+        si->stream_id = streamid;
+        ++thisdir->stream_count;
+        return si;
+    }
+    stream_info* last_stream = current_stream;
+    while(current_stream != NULL){
+        //printf("%d = %d\n", streamid, current_stream->stream_id);
+        if(current_stream->stream_id == streamid)
+        {/*printf("streamid found\n");*/
+            return current_stream; }
+        if(current_stream->pnext != NULL)
+            last_stream = last_stream->pnext;
+        //printf("next stream\n");
+        current_stream = current_stream->pnext;
+    }
+    //printf("Add at end\n");
+    stream_info* si = malloc(sizeof(stream_info));
+    last_stream->pnext = si;
+    si->datainfo.data_count = 0;
+    si->datainfo.data_bytes = 0;
+    si->datainfo.unique_bytes = 0;
+    si->datainfo.rexmit_bytes = 0;
+    si->datainfo.rexmit_pkts = 0;
+    si->pnext = NULL;
+    si->stream_id = streamid;
+    ++thisdir->stream_count;
+
+    return si;
+}
+
+void 
+get_assoc_ip(
+    chunkhdr *pchunk, 
+    int chunklength,
+    tcb *thisdir,
+    int isINIT)
+{
+    tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
+    void *eoc = pchunk;
+    eoc += chunklength;
+
+    void *ppara = pchunk;
+    tt_uint16 *pptype = ppara = ppara + 20;
+
+    while((int)ppara < (int)eoc)
+    {
+        pptype = ppara;
+        tt_uint16 type = ntohs(*pptype);
+        tt_uint16 *pplength = ppara + 2;
+        tt_uint16 plength = ntohs(*pplength);
+        
+        
+        /*PADDING*/
+        while(plength%4 != 0)   plength++;
+
+        /* multihomed ipv4adresses */
+        if(type == 5)
+        {
+
+
+            uint32_t *pip4 = ppara + 4;
+            void *eop = ppara + plength;
+            /*Loop within the parameter for possible multiple ips*/
+            while((int)pip4 < (int)eop)
+            {
+                void *tmp = pip4;
+                
+                uint32_t ipv4 = *pip4;
+
+                if(isINIT)
+                {
+                    while(assoc_pair->a_address.un.ip4.s_addr != ipv4)
+                    {
+                        if(assoc_pair->next == NULL)
+                        {
+                            tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
+                            assoc_pair->next = pair;
+                            pair->a_address.addr_vers = 4;
+                            pair->next = NULL;
+                            pair->a_address.un.ip4.s_addr = ipv4;
+                        }
+                        assoc_pair = assoc_pair->next;
+                    }
+                }
+                else
+                {
+                    while(assoc_pair->b_address.un.ip4.s_addr != ipv4)
+                    {
+                        if(assoc_pair->next == NULL)
+                        {
+                            tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
+                            assoc_pair->next = pair;
+                            pair->a_address.addr_vers = 4;
+                            pair->next = NULL;
+                            pair->b_address.un.ip4.s_addr = ipv4;
+                        }
+                        assoc_pair = assoc_pair->next;
+                    }
+                }
+                
+                
+                pip4 = tmp + 4;
+            }
+
+        }
+        ppara += plength;
+    }
+}
+
 tcp_pair *
 dosctptrace(
     struct ip *pip,
     struct sctphdr *psctp,
     void *plast)
 {
+    struct tcp_options *psctpo;
+    PLOTTER         to_tsgpl;
+    PLOTTER         from_tsgpl;
+    PLOTTER         tlinepl;
+    tcp_pair        *ptp_save;
+    tcp_pair        tp_in;
+    u_short         th_sport;	/* source port */
+    u_short         th_dport;	/* destination port */
+    tcp_seq         th_vertag;	/* verification tag */
+    tcp_seq         th_chksum;	/* checksum */
+    tt_uint16       stream_id;
+    tcp_seq         th_seq;		/* sequence number */
+    u_int8_t        th_ctype;       /*chunk type*/     
+    short           ip_len;		/* total length */
+    Bool            hw_dup = FALSE;	/* duplicate at the hardware level */
+    Bool            retrans;
+    Bool            probe;
+    int             retrans_num_bytes;
+    Bool            out_order;	/* out of order */  
+    tcb             *thisdir;
+    tcb             *otherdir;
+    stream_info     *thisstream;
+    int             dir;
+    int             sctp_length;
+    int             sctp_data_length;
+    u_long          start;
+    u_long          end;
+    u_short         th_win;		/* window */
+    u_long          eff_win;	/* window after scaling */
+    seqnum          old_this_windowend; /* for graphing */
+    ptp_ptr         *sctp_ptr = NULL;
+    enum t_ack	sack_type=NORMAL; /* how should we draw the ACK */
+    tcp_seq	th_ack;
+    
+    
     /* make sure we have enough of the packet */
     if ((char *)psctp + sizeof(struct sctphdr)-1 > (char *)plast) {
 	if (warn_printtrunc)
@@ -1359,8 +1923,479 @@ dosctptrace(
 	++ctrunc;
 	return(NULL);
     }
-    tcp_pair *hej;
-    return hej;
+    
+    /* convert interesting fields to local byte order */
+    th_vertag   = ntohl(psctp->th_vertag);
+    th_chksum   = ntohl(psctp->th_chksum);
+    th_sport = ntohs(psctp->th_sport);
+    th_dport = ntohs(psctp->th_dport);
+    //th_ctype = ntohs(psctp->th_chunktype);
+    //th_win   = ntohs(psctp->th_win);
+    //th_urp   = ntohs(psctp->th_urp);
+    ip_len   = gethdrlength(pip, plast) + getpayloadlength(pip,plast);
+
+   
+    /* make sure this is one of the connections we want */
+    ptp_save = FindTTPsctp(pip,psctp,&dir, &sctp_ptr);
+
+    ++sctp_packet_count;
+
+    if (ptp_save == NULL) {
+	return(NULL);
+    }
+
+    ++sctp_trace_count;
+
+    if (run_continuously && (sctp_ptr == NULL)) {
+      fprintf(stderr, "Did not initialize sctp pair pointer\n");
+      exit(1);
+    }
+
+    /* do time stats */
+    if (ZERO_TIME(&ptp_save->first_time)) {
+	ptp_save->first_time = current_time;
+    }
+    ptp_save->last_time = current_time;
+
+
+    /* bug fix:  it's legal to have the same end points reused.  The */
+    /* program uses a heuristic of looking at the elapsed time from */
+    /* the last packet on the previous instance and the number of FINs */
+    /* in the last instance.  If we don't increment the fin_count */
+    /* before bailing out in "ignore_pair" below, this heuristic breaks */
+
+    /* figure out which direction this packet is going */
+    if (dir == A2B) {
+	thisdir  = &ptp_save->a2b;
+	otherdir = &ptp_save->b2a;
+    } else {
+	thisdir  = &ptp_save->b2a;
+	otherdir = &ptp_save->a2b;
+    }
+    
+     /* calculate data length */
+    sctp_length = getpayloadlength(pip, plast);
+    sctp_data_length = sctp_length - 12; //inte säker 32 bitar +32 +32 = 12 bytes
+
+//    /* calc. data range */
+//    start = th_seq;
+//    end = start + sctp_data_length;
+    
+    ++thisdir->packets;
+    ++ptp_save->packets;
+    
+    chunkhdr *pchunk;
+    
+    /* point to first chunkhdr */
+    void *tmp;
+    tmp = psctp;
+    pchunk = tmp + 12;      //commonhdr always 12 bytes
+    void *eopacket = tmp + sctp_length;
+    
+    
+    /* read all chunkhdrs within packet */
+    while((int)pchunk < (int)eopacket)
+    {
+        
+        /* chunklength with padding (multiple of 4 bytes) */
+        int chunklength = ntohs(pchunk->th_chunklength);
+        while(chunklength%4!=0)
+            chunklength++;
+        
+        
+        /* count chunktypes */
+        if(DATA_SET(pchunk)){
+            ++thisdir->data_count;
+            void *tmp = pchunk;
+            tt_uint16* pstream_id = tmp + 8;
+            stream_id = ntohs(*pstream_id);
+            thisstream = get_stream_tcb(thisdir, stream_id);
+            ++thisstream->datainfo.data_count;
+        }
+        else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 1); ++thisdir->init_count;}
+        else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 0); ++thisdir->init_ack_count;
+//        tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
+//            do
+//            {
+//                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
+//                assoc_pair = assoc_pair->next;
+//            }while(assoc_pair->next != NULL);
+        }
+        else if(SACK_SET(pchunk)){++thisdir->sack_count;}
+        else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
+        else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
+        else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
+        else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
+        else if(SDACK_SET(pchunk)){++thisdir->shutdown_ack_count;}
+        else if(ERR_SET(pchunk)){++thisdir->error_count;}
+        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_echo_count;}
+        else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
+        else if(ECNE_SET(pchunk)){++thisdir->ecne_count;}
+        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_count;}
+        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_complete_count;}
+        else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
+        else {++thisdir->other_count;}
+        ++thisdir->chunk_count;        
+        
+        /* idle-time stats */
+        if (!ZERO_TIME(&thisdir->last_time)) {
+	u_llong itime = elapsed(thisdir->last_time,current_time);
+	if (itime > thisdir->idle_max)
+	    thisdir->idle_max = itime;
+        }
+        thisdir->last_time = current_time;
+        
+        
+        /* compute the "effective window", which is the advertised window */
+        /* with scaling */
+        if (SACK_SET(pchunk) || INIT_SET(pchunk)) {
+            
+            int* inttmp;
+            void* tmp;
+            tmp = pchunk;
+            inttmp = tmp + 8;
+            eff_win = ntohl(*inttmp);
+            
+            if (thisdir->f1323_ws && otherdir->f1323_ws && !INIT_SET(pchunk))
+              eff_win <<= thisdir->window_scale;
+        } else {
+            eff_win = 0;
+        }
+        
+        /* calc. data range */
+        /* tsn in sctp is counted per datachunk */
+        start = 0;
+        end = 0;
+        if(DATA_SET(pchunk))
+        {
+            int* inttmp;
+            void* tmp;
+            tmp = pchunk;
+            inttmp = tmp + 4;
+            start = ntohl(*inttmp);
+            end = start;
+        }
+
+        /* seq. space wrap around stats */
+        /* If all four quadrants have been visited and the current packet
+         * is in the same quadrant as the syn, check if latest seq. num is
+         * wrapping past the syn. If it is, increment wrap_count
+         */
+        if ((thisdir->quad1 && thisdir->quad2 && thisdir->quad3 && thisdir->quad4)) {
+            if ((IN_Q1(thisdir->syn) && (IN_Q1(end))) ||  (IN_Q2(thisdir->syn) && (IN_Q2(end))) || ((IN_Q3(thisdir->syn) && (IN_Q3(end))) || ((IN_Q4(thisdir->syn) && (IN_Q4(end)))))) {
+                if (end >= thisdir->syn) {
+                    if (debug>1)
+                        fprintf(stderr, "\nWARNING : sequence space wrapped around here \n");
+                    thisdir->seq_wrap_count++;
+                    thisdir->quad1=0;
+                    thisdir->quad2=0;
+                    thisdir->quad3=0;
+                    thisdir->quad4=0;
+                }
+            }
+        } 
+
+        /* Mark the visited quadrants */
+        if (!thisdir->quad1) {
+            if (IN_Q1(start) || IN_Q1(end))
+                thisdir->quad1=1;
+        } 
+        if (!thisdir->quad2) {
+            if (IN_Q2(start) || IN_Q2(end))
+                thisdir->quad2=1;
+        }
+        if (!thisdir->quad3) {
+            if (IN_Q3(start) || IN_Q3(end))
+                thisdir->quad3=1;
+        }
+        if (!thisdir->quad4) {
+            if (IN_Q4(start) || IN_Q4(end))
+                thisdir->quad4=1;
+        }
+        
+        /* bugfix in case of retransmitted init? */
+        if (INIT_SET(pchunk)) {
+            /* error checking - better not change! */
+            if ((thisdir->syn_count > 1) && (thisdir->syn != start)) {
+                /* it changed, that shouldn't happen! */
+                if (warn_printbad_syn_fin_seq)
+                    fprintf(stderr, "\
+                        %s->%s: rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
+                            thisdir->host_letter,thisdir->ptwin->host_letter,
+                            thisdir->syn, start,
+                            (int)(elapsed(ptp_save->first_time,current_time)/1000000));
+                thisdir->bad_behavior = TRUE;
+            }
+            thisdir->syn = start;
+            otherdir->ack = start;
+        }
+		/* bug fix for Rob Austein <sra@epilogue.com> */
+        
+         if (SD_SET(pchunk)) {
+            /* bug fix, if there's data here too, we need to bump up the FIN */
+            /* (psc data file shows example) */
+            u_long fin = start;
+            /* error checking - better not change! */
+            if ((thisdir->fin_count > 1) && (thisdir->fin != fin)) {
+                /* it changed, that shouldn't happen! */
+                if (warn_printbad_syn_fin_seq)
+                    fprintf(stderr, "\
+                %s->%s: rexmitted FIN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
+                            thisdir->host_letter,thisdir->ptwin->host_letter,
+                            thisdir->fin, fin,
+                            (int)(elapsed(ptp_save->first_time,current_time)/1000000));
+                thisdir->bad_behavior = TRUE;
+            }
+            thisdir->fin = fin;
+        }
+        
+        /* remember the OLD window end for graphing */
+        /* (bug fix - Thu Aug 12, 1999) */
+        old_this_windowend = thisdir->windowend;
+
+        if (SACK_SET(pchunk)) {
+            tt_uint32* ptmp;
+            void* ptmp2;
+            ptmp2 = pchunk;
+            ptmp = ptmp2 + 8;
+            thisdir->windowend = ntohl(*ptmp) + eff_win;
+        }
+        /* end bugfix */
+    
+        
+        /***********************************************************************/
+        /***********************************************************************/
+        /* if we're ignoring this connection, do no further processing	   */
+        /***********************************************************************/
+        /***********************************************************************/
+        if (ptp_save->ignore_pair) {
+            return(ptp_save);
+        }
+
+        /* save to a file if requested */
+        if (output_filename) {
+            PcapSavePacket(output_filename,pip,plast);
+        }
+
+        /* now, print it if requested */
+        if (printem && !printallofem) {
+            printf("Packet %lu\n", pnum);
+            printpacket(0,		/* original length not available */
+                        (char *)plast - (char *)pip + 1,
+                        NULL,0,	/* physical stuff not known here */
+                        pip,plast,thisdir);
+        }
+
+        /* grab the address from this packet */
+        CopyAddr(&tp_in.addr_pair, pip,
+                 th_sport, th_dport);
+
+
+        /* simple bookkeeping */
+        if (PIP_ISV6(pip)) {
+            ++thisdir->ipv6_segments;
+        }
+        
+        
+        /* plotter shorthand */
+        to_tsgpl     = otherdir->tsg_plotter;
+        from_tsgpl   = thisdir->tsg_plotter;
+
+        /* plotter shorthand (NOTE: we are using one plotter for both directions) */
+        tlinepl      = thisdir->tline_plotter;
+
+        /* check the options */
+        psctpo = ParseSctpOptions(psctp,plast);
+        if (psctpo->mss != -1)
+            thisdir->mss = psctpo->mss;
+        if (psctpo->ws != -1) {
+            thisdir->window_scale = psctpo->ws;
+            thisdir->f1323_ws = TRUE;
+        }
+        if (psctpo->tsval != -1) {
+            thisdir->f1323_ts = TRUE;
+        }
+        
+        if(SACK_SET(pchunk))
+        {
+            void* ptmp2;
+            tt_uint16 numgapblocks = 0;
+            tt_uint16 numduptsn = 0;
+            tt_uint32 tsnack = 0;
+            
+            /* set tsn ack */
+            tt_uint32* ptofield;
+            ptmp2 = pchunk;
+            ptofield = ptmp2 + 4;
+            tsnack = ntohl(*ptofield);
+            
+            /* numgapblocks */
+            tt_uint16* ptofield2;
+            ptofield2 = ptmp2 + 12;
+            numgapblocks = ntohs(*ptofield2);
+            
+            /* num duplicate tsns */
+            ptofield2 = ptmp2 + 14;
+            numduptsn = ntohs(*ptofield2);
+        }
+    
+        /* NOW, unless BOTH sides asked for window scaling	*/
+        /* we aren't using window scaling */
+        if (!INIT_SET(pchunk) &&
+            ((!thisdir->f1323_ws) || (!otherdir->f1323_ws))) {
+            thisdir->window_scale = otherdir->window_scale = 0;
+        }
+
+        /* check sacks */
+        if (psctpo->sack_req) {
+            thisdir->fsack_req = 1;
+        }
+  
+        if ((SACK_SET(pchunk))) {
+            ++thisdir->sack_count;
+        }
+        /* unless both sides advertised sack, we shouldn't see them, otherwise
+           we hope they actually send them */
+            thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    
+    
+        /* do data stats */
+        if (DATA_SET(pchunk)) {
+            tt_uint16* inttmp;  
+            void* tmp;   
+            tmp = pchunk;
+            inttmp = tmp + 2;
+            
+            thisdir->data_pkts += 1;
+            sctp_data_length = ntohs(*inttmp)-16;
+            thisdir->data_bytes += sctp_data_length;
+            thisstream->datainfo.data_bytes += sctp_data_length;
+            
+            tt_uint32* tsn = tmp + 4;
+            th_seq = ntohl(*tsn);
+        }
+        if (ZERO_TIME(&thisdir->first_data_time))
+            thisdir->first_data_time = current_time;
+        thisdir->last_data_time = current_time;
+        
+        /* instantaneous throughput stats */
+        if (graph_tput && DATA_SET(pchunk)) {
+            DoThru(thisdir,sctp_data_length);
+        }
+
+//        /* segment size graphs */
+//        if ((tcp_data_length > 0) && (thisdir->segsize_plotter != NO_PLOTTER)) {
+//            extend_line(thisdir->segsize_line, current_time, tcp_data_length);
+//            extend_line(thisdir->segsize_avg_line, current_time,
+//                        thisdir->data_bytes / thisdir->data_pkts);
+//        }
+
+        /* sequence number stats */
+        if ((thisdir->min_seq == 0) && (start != 0)) {
+            thisdir->min_seq = start; /* first byte in this segment */
+            thisdir->max_seq = end;	  /* last byte in this segment */
+        }
+        if (SEQ_GREATERTHAN (end,thisdir->max_seq)) {
+            thisdir->max_seq = end;
+        }
+        thisdir->latest_seq = end;
+
+        
+
+        /* check for hardware duplicates */
+        /* only works for IPv4, IPv6 has no mandatory ID field */
+        if (PIP_ISV4(pip) && docheck_hw_dups)
+            hw_dup = check_hw_dups(pip->ip_id, th_seq, thisdir);
+
+        /* Kevin Lahey's ECN code */
+        /* only works for IPv4 */
+//        if (PIP_ISV4(pip)) {
+//            ecn_ce = IP_ECT(pip) && IP_CE(pip);
+//        }
+//        cwr = CWR_SET(ptcp);
+//        ecn_echo = ECN_ECHO_SET(ptcp);
+//
+//        /* save the stream contents, if requested */
+//        if (tcp_data_length > 0) {
+//            u_char *pdata = (u_char *)ptcp + TH_OFF(ptcp)*4;
+//            u_long saved;
+//            u_long	missing;
+//
+//            saved = tcp_data_length;
+//            if ((char *)pdata + tcp_data_length > ((char *)plast+1))
+//                saved = (char *)plast - (char *)pdata + 1;
+//
+//            /* see what's missing */
+//            missing = tcp_data_length - saved;
+//            if (missing > 0) {
+//                thisdir->trunc_bytes += missing;
+//                ++thisdir->trunc_segs;
+//            }
+//
+//            if (save_tcp_data)
+//                ExtractContents(start,tcp_data_length,saved,pdata,thisdir);
+//        }
+        
+        /* do rexmit stats */
+        retrans = FALSE;
+        probe = FALSE;
+        out_order = FALSE;
+        retrans_num_bytes = 0;
+        if (DATA_SET(pchunk)) {
+            int len = 1;            //sctp datachunk is one tsn
+            int retrans_cnt=0;
+
+            /* rexmit function for sctp only tell us if chunk was
+               rexmitted not how many bytes that were, if the chunk
+               was rexmitted all data in the chunk was. */
+            if(rexmit(thisdir,start, len, &out_order)){
+                retrans_cnt = retrans_num_bytes = sctp_data_length;
+                thisstream->datainfo.rexmit_pkts++;
+            }
+            else{
+                thisstream->datainfo.unique_bytes += sctp_data_length; 
+                thisdir->unique_bytes += sctp_data_length;
+            }
+           
+            thisstream->datainfo.rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
+            thisdir->rexmit_bytes += retrans_num_bytes; //TABORT ska göras lengre ner
+            
+            if (out_order)
+                ++thisdir->out_order;     
+        }
+
+            
+        
+        ////////////////////////////////////////////
+        
+        /* point to next chunkhdr or eop */
+        void* tmp2;
+        tmp2 = pchunk;
+        pchunk = tmp2 + chunklength;
+
+        
+    }
+
+
+    ///////////////////////////////////////
+              /*Christos rtt fck/*
+    ///////////////////////////////////////
+    /* do rtt stats */
+    if (SACK_SET(pchunk)) {
+	sack_type = sack_in(otherdir,th_ack,sctp_data_length,eff_win);
+
+	if ( (th_ack == (otherdir->syn+1)) &&
+		 (otherdir->syn_count == 1) )
+		 otherdir->rtt_3WHS=otherdir->rtt_last; 
+		 /* otherdir->rtt_last was set in the call to ack_in() */
+	
+        otherdir->lastackno = th_ack;	
+    }
+    ///////////////////////////////////////
+    
+    
+    
+    
+    return ptp_save;
 }
 
 tcp_pair *
@@ -1426,13 +2461,13 @@ dotrace(
     /* make sure this is one of the connections we want */
     ptp_save = FindTTP(pip,ptcp,&dir, &tcp_ptr);
 
-    ++tcp_packet_count;
+    ++sctp_packet_count;
 
     if (ptp_save == NULL) {
 	return(NULL);
     }
 
-    ++tcp_trace_count;
+    ++sctp_trace_count;
 
     if (run_continuously && (tcp_ptr == NULL)) {
       fprintf(stderr, "Did not initialize tcp pair pointer\n");
@@ -1470,7 +2505,7 @@ dotrace(
 	++thisdir->fin_count;
 
     /* end bug fix */
-
+///////////////Jonas fixar nedåt////////////////////////////////////
 
     /* compute the "effective window", which is the advertised window */
     /* with scaling */
@@ -1692,7 +2727,7 @@ dotrace(
 	thisdir->last_data_time = current_time;
     }
 
-    /* total packets stats */
+    /* total packets stats */ //////////////////////////////////////////////////
     ++ptp_save->packets;
     ++thisdir->packets;
 
@@ -2500,21 +3535,32 @@ trace_done(void)
   static int count = 0;
   Bool incomplete_pkt_capture = FALSE;
   
+  
   if (!run_continuously) {
     if (!printsuppress) {
-	if (tcp_trace_count == 0) {
-	    fprintf(stdout,"%sno traced TCP packets\n", comment);
-	    return;
-	} else {
+	if (num_sctp_pairs > 0 || global_sctp) {
+	    fprintf(stdout,"%sSCTP connection info:\n", comment);
+	}
+        else if(num_tcp_pairs > 0){
 	    fprintf(stdout,"%sTCP connection info:\n", comment);
 	}
+        else{
+            fprintf(stdout,"%sNo TCP or SCTP packets found:\n", comment);
+            return;
+        }
     }
 
     if (!printbrief)
-	fprintf(stdout,"%s%d TCP %s traced:\n",
-		comment,
-		num_tcp_pairs + 1,
-		num_tcp_pairs==0?"connection":"connections");
+        if (global_sctp)
+            fprintf(stdout,"%s%d SCTP %s traced:\n",
+                    comment,
+                    num_sctp_pairs + 1,
+                    num_sctp_pairs==0?"connection":"connections");
+        else
+            fprintf(stdout,"%s%d TCP %s traced:\n",
+                    comment,
+                    num_tcp_pairs + 1,
+                    num_tcp_pairs==0?"connection":"connections");
     if (ctrunc > 0) {
 	fprintf(stdout,
 		"%s*** %lu packets were too short to process at some point\n",
@@ -2533,10 +3579,10 @@ trace_done(void)
 	int max_depth = 0;
 	int max_comparisons = 0;
 	float max_searches_compare = 0.0;
-	fprintf(stdout,"%sTotal searches: %u\n", comment, tcp_packet_count);
+	fprintf(stdout,"%sTotal searches: %u\n", comment, sctp_packet_count);
 	fprintf(stdout,"%s  Total comparisons: %u\n", comment, search_count);
 	fprintf(stdout,"%s  Average compares/search: %.2f\n",
-		comment, (float)search_count / (float)tcp_packet_count);
+		comment, (float)search_count / (float)sctp_packet_count);
 	fprintf(stdout,"%sHash table size: %u\n", comment, HASH_TABLE_SIZE);
 	for (h=0; h < HASH_TABLE_SIZE; ++h) {
 	    struct search_efficiency *pse = &hashtable_efficiency[h];
@@ -2564,31 +3610,61 @@ trace_done(void)
     }
 
     /* complete the "idle time" calculations using NOW */
-    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
-	tcp_pair *ptp = ttp[ix];
-	tcb *thisdir; 
-	u_llong itime;
+    if(global_sctp){
+        for (ix = 0; ix <= num_sctp_pairs; ++ix) {
+            tcp_pair *ptp = ttp[ix];
+            tcb *thisdir; 
+            u_llong itime;
 
-	/* if it's CLOSED, skip it */
-	if ((FinCount(ptp)>=2) || (ConnReset(ptp)))
-	    continue;
+            /* if it's CLOSED, skip it */
+            if ((ShutdownCount(ptp)>=2) || (ConnReset(ptp)))
+                continue;
 
-	/* a2b direction */
-	thisdir = &ptp->a2b;
-	if (!ZERO_TIME(&thisdir->last_time)) {
-	    itime = elapsed(thisdir->last_time,current_time);
-	    if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	}
-	    
+            /* a2b direction */
+            thisdir = &ptp->a2b;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
 
-	/* b2a direction */
-	thisdir = &ptp->b2a;
-	if (!ZERO_TIME(&thisdir->last_time)) {
-	    itime = elapsed(thisdir->last_time,current_time);
-	    if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	}
+
+            /* b2a direction */
+            thisdir = &ptp->b2a;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+        }
+    }
+    else{
+        for (ix = 0; ix <= num_tcp_pairs; ++ix) {
+            tcp_pair *ptp = ttp[ix];
+            tcb *thisdir; 
+            u_llong itime;
+
+            /* if it's CLOSED, skip it */
+            if ((FinCount(ptp)>=2) || (ConnReset(ptp)))
+                continue;
+
+            /* a2b direction */
+            thisdir = &ptp->a2b;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+
+
+            /* b2a direction */
+            thisdir = &ptp->b2a;
+            if (!ZERO_TIME(&thisdir->last_time)) {
+                itime = elapsed(thisdir->last_time,current_time);
+                if (itime > thisdir->idle_max)
+                    thisdir->idle_max = itime;
+            }
+        }
     }
   }
 
@@ -2602,7 +3678,7 @@ trace_done(void)
 	    exit(-1);
 	}
 
-      if (filter_output) {
+      if (filter_output && global_sctp) {
 	 if (!run_continuously) {
 	    /* mark the connections to ignore */
 	    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
@@ -2619,10 +3695,80 @@ trace_done(void)
 	    }
 	 }
       }
+      else if(filter_output){
+      	 if (!run_continuously) {
+	    /* mark the connections to ignore */
+	    for (ix = 0; ix <= num_tcp_pairs; ++ix) {
+	       ptp = ttp[ix];
+	       if (PassesFilter(ptp)) {
+		  if (++count == 1)
+		      fprintf(f_passfilter,"%d", ix+1);
+		  else
+		      fprintf(f_passfilter,",%d", ix+1);
+	       } 
+               else {
+		  /* else ignore it */
+		  ptp->ignore_pair = TRUE;
+	       }
+	    }
+	 }
+      }
     }
    
-  if (!run_continuously) {
+  if (!run_continuously && global_sctp) {
     /* print each connection */
+    if (!printsuppress) {
+        Bool first = TRUE; /* Used with <SP>-separated-values
+			    * Keeps track of whether header has already
+			    * been printed */
+	for (ix = 0; ix <= num_sctp_pairs; ++ix) {
+	    ptp = ttp[ix];
+
+	    if (!ptp->ignore_pair) {
+		if ((printbrief) && (!ignore_non_comp || SctpConnComplete(ptp))) {
+		    fprintf(stdout,"%3d: ", ix+1);
+		    PrintBrief(ptp);
+		} else if (!ignore_non_comp || SctpConnComplete(ptp)) {
+		    if(csv || tsv || (sv != NULL)) {
+		       if(first) {
+			  PrintSVHeader();
+			  first = FALSE;
+		       }
+		       fprintf(stdout, "%d%s", ix+1, sp);
+		    }
+		    else {
+		       if (ix > 0)
+			 fprintf(stdout,"================================\n");
+		       fprintf(stdout,"SCTP connection %d:\n", ix+1);
+		       
+		    }
+                    SctpPrintTrace(ptp);
+		}
+	       /* This piece of code dumps PF file when filtered with '-c' 
+		  option, this option says to select only complete connections.
+		  The PF file will contain the connection numbers which are
+		  selected to be complete */
+	       if (ignore_non_comp)
+		   if (ConnComplete(ptp)) {
+		      if (++count == 1)
+			  fprintf(f_passfilter, "%d", ix+1);
+		      else
+			  fprintf(f_passfilter, ",%d", ix+1);
+		   }
+	       /******************************/
+	      
+	      /* If we are extracting packet contents (-e option), we shall check to
+	       * see if we missed segments during packet capture causing the
+	       * X2Y_contents.dat files that we drop to contain voids in them.
+	       * We shall emit a warning upon such an event below. */
+	      if (save_tcp_data && !incomplete_pkt_capture && MissingData(ptp)) 
+		incomplete_pkt_capture = TRUE;
+	    }	  
+	}
+    }
+  }
+  else if(!run_continuously){
+          /* print each connection */
     if (!printsuppress) {
         Bool first = TRUE; /* Used with <SP>-separated-values
 			    * Keeps track of whether header has already
@@ -2648,7 +3794,7 @@ trace_done(void)
 		       fprintf(stdout,"TCP connection %d:\n", ix+1);
 		       
 		    }
-		    PrintTrace(ptp);
+                    PrintTrace(ptp);
 		}
 	       /* This piece of code dumps PF file when filtered with '-c' 
 		  option, this option says to select only complete connections.
@@ -2831,6 +3977,190 @@ get_short_opt(
     u_short s;
     memcpy(&s,ptr,sizeof(u_short));
     return(s);
+}
+
+struct tcp_options *
+ParseSctpOptions(
+    struct sctphdr *psctp,
+    void *plast)
+{
+    static struct tcp_options psctpo;
+    struct sack_block *psack;
+    u_char *pdata;
+    u_char *popt;
+    u_char *plen;
+
+//    popt  = (u_char *)psctp + sizeof(struct sctphdr);
+//    pdata = (u_char *)psctp + TH_OFF(psctp)*4;
+
+    /* init the options structure */
+    memset(&psctpo,0,sizeof(psctpo));
+    psctpo.mss = psctpo.ws = psctpo.tsval = psctpo.tsecr = -1;
+    psctpo.sack_req = 0;
+    psctpo.sack_count = -1;
+    psctpo.echo_req = psctpo.echo_repl = -1;
+    psctpo.cc = psctpo.ccnew = psctpo.ccecho = -1;
+//
+//    /* a quick sanity check, the unused (MBZ) bits must BZ! */
+//    if (warn_printbadmbz) {
+//	if (TH_X2(psctp) != 0) {
+//	    fprintf(stderr,
+//		    "TCP packet %lu: 4 reserved bits are not zero (0x%01x)\n",
+//		    pnum, TH_X2(psctp));
+//	}
+//	if ((psctp->th_flags & 0xc0) != 0) {
+//	    fprintf(stderr,
+//		    "TCP packet %lu: upper flag bits are not zero (0x%02x)\n",
+//		    pnum, psctp->th_flags);
+//	}
+//    } else {
+//	static int warned = 0;
+//	if (!warned &&
+//	    ((TH_X2(psctp) != 0) || ((psctp->th_flags & 0xc0) != 0))) {
+//	    warned = 1;
+//	    fprintf(stderr, "\
+//TCP packet %lu: reserved bits are not all zero.  \n\
+//\tFurther warnings disabled, use '-w' for more info\n",
+//		    pnum);
+//	}
+//    }
+//
+//    /* looks good, now check each option in turn */
+//    while (popt < pdata) {
+//	plen = popt+1;
+//
+//	/* check for truncation error */
+//	if ((char *)popt > (char *)plast) {
+//	    if (warn_printtrunc)
+//		fprintf(stderr,"\
+//ParseOptions: packet %lu too short to parse remaining options\n", pnum);
+//	    ++ctrunc;
+//	    break;
+//	}
+//
+//#define CHECK_O_LEN(opt) \
+//	if (*plen == 0) { \
+//	    if (warn_printtrunc) fprintf(stderr, "\
+//ParseOptions: packet %lu %s option has length 0, skipping other options\n", \
+//                                           pnum,opt); \
+//	    popt = pdata; break;} \
+//	if ((char *)popt + *plen - 1 > (char *)(plast)) { \
+//	    if (warn_printtrunc) \
+//		fprintf(stderr, "\
+//ParseOptions: packet %lu %s option truncated, skipping other options\n", \
+//              pnum,opt); \
+//	    ++ctrunc; \
+//	    popt = pdata; break;} \
+//
+//
+//	switch (*popt) {
+//	  case TCPOPT_EOL: ++popt; break;
+//	  case TCPOPT_NOP: ++popt; break;
+//	  case TCPOPT_MAXSEG:
+//	    CHECK_O_LEN("TCPOPT_MAXSEG");
+//	    psctpo.mss = ntohs(get_short_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_WS:
+//	    CHECK_O_LEN("TCPOPT_WS");
+//	    psctpo.ws = *((u_char *)(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_TS:
+//	    CHECK_O_LEN("TCPOPT_TS");
+//	    psctpo.tsval = ntohl(get_long_opt(popt+2));
+//	    psctpo.tsecr = ntohl(get_long_opt(popt+6));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_ECHO:
+//	    CHECK_O_LEN("TCPOPT_ECHO");
+//	    psctpo.echo_req = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_ECHOREPLY:
+//	    CHECK_O_LEN("TCPOPT_ECHOREPLY");
+//	    psctpo.echo_repl = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CC:
+//	    CHECK_O_LEN("TCPOPT_CC");
+//	    psctpo.cc = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CCNEW:
+//	    CHECK_O_LEN("TCPOPT_CCNEW");
+//	    psctpo.ccnew = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_CCECHO:
+//	    CHECK_O_LEN("TCPOPT_CCECHO");
+//	    psctpo.ccecho = ntohl(get_long_opt(popt+2));
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_SACK_PERM:
+//	    CHECK_O_LEN("TCPOPT_SACK_PERM");
+//	    psctpo.sack_req = 1;
+//	    popt += *plen;
+//	    break;
+//	  case TCPOPT_SACK:
+//	    /* see which bytes are acked */
+//	    CHECK_O_LEN("TCPOPT_SACK");
+//	    psctpo.sack_count = 0;
+//	    psack = (sack_block *)(popt+2);  /* past the kind and length */
+//	    popt += *plen;
+//	    while ((char *)psack < (char *)popt) {
+//		struct sack_block *psack_local =
+//		    &psctpo.sacks[(unsigned)psctpo.sack_count];
+//		/* warning, possible alignment problem here, so we'll
+//		   use memcpy() and hope for the best */
+//		/* better use -fno-builtin to avoid gcc alignment error
+//		   in GCC 2.7.2 */
+//		memcpy(psack_local, psack, sizeof(sack_block));
+//
+//		/* convert to local byte order (Jamshid Mahdavi) */
+//		psack_local->sack_left  = ntohl(psack_local->sack_left);
+//		psack_local->sack_right = ntohl(psack_local->sack_right);
+//
+//		++psack;
+//		if ((char *)psack > ((char *)plast+1)) {
+//		    /* this SACK block isn't all here */
+//		    if (warn_printtrunc)
+//			fprintf(stderr,
+//				"packet %lu: SACK block truncated\n",
+//				pnum);
+//		    ++ctrunc;
+//		    break;
+//		}
+//		++psctpo.sack_count;
+//		if (psctpo.sack_count > MAX_SACKS) {
+//		    /* this isn't supposed to be able to happen */
+//		    fprintf(stderr,
+//			    "Warning, internal error, too many sacks!!\n");
+//		    psctpo.sack_count = MAX_SACKS;
+//		}
+//	    }
+//	    break;
+//	  default:
+//	    if (debug)
+//		fprintf(stderr,
+//			"Warning, ignoring unknown TCP option 0x%x\n",
+//			*popt);
+//	    CHECK_O_LEN("TCPOPT_UNKNOWN");
+//
+//	    /* record it anyway... */
+//	    if (psctpo.unknown_count < MAX_UNKNOWN) {
+//		int ix = psctpo.unknown_count; /* make lint happy */
+//		psctpo.unknowns[ix].unkn_opt = *popt;
+//		psctpo.unknowns[ix].unkn_len = *plen;
+//	    }
+//	    ++psctpo.unknown_count;
+//	    
+//	    popt += *plen;
+//	    break;
+//	}
+//    }
+
+    return(&psctpo);
 }
 
 

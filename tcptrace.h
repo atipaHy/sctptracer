@@ -90,6 +90,7 @@ static char const GCC_UNUSED rcsid_tcptrace[] =
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include "sctp.h"
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netdb.h>
@@ -108,6 +109,10 @@ static char const GCC_UNUSED rcsid_tcptrace[] =
 
 /* memory allocation routines */
 #include "pool.h"
+
+/*global variable to know what sort of packet*/
+extern int global_sctp;
+
 
 /* we want LONG LONG in some places */
 #if SIZEOF_UNSIGNED_LONG_LONG_INT >= 8
@@ -260,7 +265,7 @@ extern timeval first_packet;
 extern timeval last_packet;
 
 /* counters */
-extern u_long tcp_trace_count;
+extern u_long sctp_trace_count;
 extern u_long udp_trace_count;
 
 typedef struct segment {
@@ -285,10 +290,32 @@ typedef struct seqspace {
     quadrant 	*pquad[4];
 } seqspace;
 
+
+/* Data stats per stream */
+typedef struct data_info{
+    u_llong     data_count;
+    u_llong     data_bytes;
+    u_llong	unique_bytes;	
+    u_llong	rexmit_bytes;
+    u_llong	rexmit_pkts;
+}data_info;
+
+typedef struct stream_info stream_info;
+
+typedef struct stream_info{
+    tt_uint16       stream_id;
+    data_info       datainfo;
+    stream_info*    pnext;
+}stream_info; 
+
+
+
 typedef struct tcb {
     /* parent pointer */
-    struct stcp_pair *ptp;
+    struct sctp_pair *ptp;
     struct tcb	*ptwin;
+    
+    stream_info*    stream_list;
 
     /* TCP information */
     seqnum	ack;
@@ -297,6 +324,15 @@ typedef struct tcb {
     seqnum	fin;
     seqnum	windowend;
     timeval	time;
+    
+    /* SCTP information */
+    seqnum      sack;   
+    seqnum      heartbeat_ack;
+    seqnum      shutdown_ack;
+    seqnum      cookie_ack;
+    seqnum      init_ack;
+    seqnum      init;
+    seqnum      shutdown;
 
     /* TCP options */
     u_int	mss;
@@ -311,6 +347,30 @@ typedef struct tcb {
     Bool window_stats_updated_for_scaling;
     u_llong     win_scaled_pkts; /* Used to calculate avg win adv */
 
+    
+    /* SCTP specifics */
+    u_llong     chunk_count;
+    u_llong     heartbeat_count;
+    u_llong     heartbeat_ack_count;
+    u_llong     shutdown_ack_count;
+    u_llong     cookie_echo_count;
+    u_llong     cookie_ack_count;
+    u_llong     sack_count;
+    u_llong     init_ack_count;
+    u_llong     data_count;
+    u_llong	out_order;
+    u_llong	error_count;
+    u_llong	ecne_count;
+    u_llong	cwr_count;
+    u_llong	auth_count;
+    u_llong	other_count;
+    u_llong     shutdown_complete_count;
+    u_char	init_count;
+    u_char	shutdown_count;
+    u_char	abort_count;
+    u_llong     stream_count;
+    
+    
     /* statistics added */
     u_llong	data_bytes;
     u_llong	data_pkts;
@@ -500,18 +560,23 @@ typedef struct tcb {
 } tcb;
 
 
+
+
 typedef u_short hash;
 
-typedef struct {
+typedef struct tcp_pair_addrblock tcp_pair_addrblock;
+
+struct tcp_pair_addrblock{
     ipaddr	a_address;
     ipaddr	b_address;
     portnum	a_port;
     portnum	b_port;
     hash	hash;
-} tcp_pair_addrblock;
+    tcp_pair_addrblock* next;
+};
 
 
-struct stcp_pair {
+struct sctp_pair {
     /* are we ignoring this one?? */
     Bool		ignore_pair;
 
@@ -520,7 +585,7 @@ struct stcp_pair {
 
     /* endpoint identification */
     tcp_pair_addrblock	addr_pair;
-
+    
     /* connection naming information */
     char		*a_hostname;
     char		*b_hostname;
@@ -543,10 +608,13 @@ struct stcp_pair {
     /* which file this connection is from */
     char		*filename;
 };
-typedef struct stcp_pair tcp_pair;
+typedef struct sctp_pair tcp_pair;
 
 typedef struct tcphdr tcphdr;
+typedef struct chunkhdr chunkhdr;
 
+
+typedef tcp_pair_addrblock sctp_pair_addrblock;
 
 extern int num_tcp_pairs;	/* how many pairs are in use */
 extern tcp_pair **ttp;		/* array of pointers to allocated pairs */
@@ -830,6 +898,10 @@ int ConnReset(tcp_pair *);
 int ConnComplete(tcp_pair *);
 u_int SynCount(tcp_pair *ptp);
 u_int FinCount(tcp_pair *ptp);
+int ConnAbort(tcp_pair *);
+int SctpConnComplete(tcp_pair *);
+u_int InitCount(tcp_pair *ptp);
+u_int ShutdownCount(tcp_pair *ptp);
 char *ts2ascii(timeval *);
 char *ts2ascii_date(timeval *);
 char *ServiceName(portnum);
@@ -856,6 +928,7 @@ int Mfflush(MFILE *pmf);
 int Mfclose(MFILE *pmf);
 int Mfpipe(int pipes[2]);
 struct tcp_options *ParseOptions(struct tcphdr *ptcp, void *plast);
+struct tcp_options *ParseSctpOptions(struct sctphdr *psctp, void *plast);
 FILE *CompOpenHeader(char *filename);
 FILE *CompOpenFile(char *filename);
 void CompCloseFile(char *filename);
@@ -924,6 +997,25 @@ char *ExpandFormat(const char *format);
 #define URGENT_SET(ptcp)((ptcp)->th_flags & TH_URG)
 #define FLAG6_SET(ptcp)((ptcp)->th_flags & 0x40)
 #define FLAG7_SET(ptcp)((ptcp)->th_flags & 0x80)
+
+/* SCTP flags macros */
+#define DATA_SET(pchunk)((pchunk)->th_chunktype == 0)
+#define INIT_SET(pchunk)((pchunk)->th_chunktype == 1)
+#define INITACK_SET(pchunk)((pchunk)->th_chunktype == 2)
+#define SACK_SET(pchunk)((pchunk)->th_chunktype == 3)
+#define HB_SET(pchunk)((pchunk)->th_chunktype == 4)
+#define HBACK_SET(pchunk)((pchunk)->th_chunktype == 5)
+#define ABORT_SET(pchunk)((pchunk)->th_chunktype == 6)
+#define SD_SET(pchunk)((pchunk)->th_chunktype == 7)
+#define SDACK_SET(pchunk)((pchunk)->th_chunktype == 8)
+#define ERR_SET(pchunk)((pchunk)->th_chunktype == 9)
+#define COOKECHO_SET(pchunk)((pchunk)->th_chunktype == 10)
+#define COOKACK_SET(pchunk)((pchunk)->th_chunktype == 11)
+#define ECNE_SET(pchunk)((pchunk)->th_chunktype == 12)
+#define CWRSCTP_SET(pchunk)((pchunk)->th_chunktype == 13)
+#define SDCOMP_SET(pchunk)((pchunk)->th_chunktype == 14)
+#define AUTH_SET(pchunk)((pchunk)->th_chunktype == 15)
+
 
 /* Changed the following macros to reflect the correct position
 of bits as specified in RFC 2481 and draft-ietf-tsvwg-ecn-04.txt */

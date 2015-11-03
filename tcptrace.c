@@ -62,6 +62,8 @@ static char const GCC_UNUSED rcsid[] =
 #include "modules.h"
 #include "version.h"
 
+/*initializing global variable*/
+int global_sctp = 0;
 
 /* version information */
 char *tcptrace_version = VERSION;
@@ -793,8 +795,13 @@ main(
     gettimeofday(&wallclock_finished, NULL);
 
     /* general output */
-    fprintf(stdout, "%s%lu packets seen, %lu TCP packets traced",
-	    comment, pnum, tcp_trace_count);
+    if (global_sctp)
+        fprintf(stdout, "%s%lu packets seen, %lu SCTP packets traced",
+                comment, pnum, sctp_trace_count);
+    
+    else
+        fprintf(stdout, "%s%lu packets seen, %lu TCP packets traced",
+	    comment, pnum, sctp_trace_count);
     if (do_udp)
 	fprintf(stdout,", %lu UDP packets traced", udp_trace_count);
     fprintf(stdout,"\n");
@@ -1115,12 +1122,17 @@ for other packet types, I just don't have a place to test them\n\n");
 	}
 		       
 	/* find the start of the TCP header */
-        Bool SCTP;
+        Bool SCTP = FALSE;
 	ret = getsctp (pip, &psctp, &plast);
-        if(ret < 0)
+        if(ret < 0){
             ret = gettcp (pip, &ptcp, &plast);
+            global_sctp = 0;
+        }
         else
+        {
             SCTP = TRUE;
+            global_sctp = 1;
+        }
 	/* if that failed, it's not TCP */
 	if (ret < 0) {
 	    udp_pair *pup;
