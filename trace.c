@@ -2020,6 +2020,55 @@ dosctptrace(
 //                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
 //                assoc_pair = assoc_pair->next;
 //            }while(assoc_pair->next != NULL);
+        
+        
+            /* Association creation*/
+//            printf("New INITACK\n");
+//        
+//            tcp_pair_addrblock *adblck = &thisdir->ptp->addr_pair;
+//            tcp_pair_addrblock *adblck2 = &thisdir->ptp->addr_pair;
+//            
+//            for(; adblck!=NULL; adblck = adblck->next)
+//            {
+//                printf("\nA: %s:%u", inet_ntoa(adblck->a_address.un.ip4), adblck->a_port);
+//                printf(", B: %s:%u\n", inet_ntoa(adblck->b_address.un.ip4), adblck->b_port);
+//            }
+//            
+//            for(adblck = &thisdir->ptp->addr_pair; adblck!=NULL; adblck = adblck->next)
+//            {
+//                //printf("A: %s\n", inet_ntoa(adblck->a_address.un.ip4));
+//                printf("A: %s:%u, B: %s:%u\n", 
+//                            inet_ntoa(adblck->a_address.un.ip4), adblck->a_port,
+//                            inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
+//                adblck2 = &thisdir->ptp->addr_pair;
+//                printf("\n\n");
+//                for(; adblck2 != NULL; adblck2 = adblck2->next)
+//                {
+//                    printf("A: %s:%u, B: %s:%u\n", 
+//                            inet_ntoa(adblck->a_address.un.ip4), adblck->a_port,
+//                            inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
+//                    ptp_snap **pptph_head = NULL;
+//                    ptp_snap *ptph;
+//                    //printf("B: %s\n", inet_ntoa(adblck2->b_address.un.ip4));
+//                    hash calchash = (adblck->a_address.un.ip4.s_addr 
+//                            + adblck2->b_address.un.ip4.s_addr 
+//                            + adblck->a_port + adblck2->b_port);
+//                    hash hval = calchash % HASH_TABLE_SIZE;
+//                    
+//                    pptph_head = &ptp_hashtable[hval];
+//                    ptph = MakePtpSnap();
+//                    ptph->addr_pair.a_address = adblck->a_address;
+//                    ptph->addr_pair.a_port = adblck->a_port;
+//                    ptph->addr_pair.b_address = adblck2->b_address;
+//                    ptph->addr_pair.b_port = adblck2->b_port;
+//                    ptph->addr_pair.hash = hval;
+//                   
+//                    ptph->ptp = &sctp_ptr;
+//                        
+//                    SnapInsert(pptph_head, ptph);
+                  
+ //               }
+ //           }
         }
         else if(SACK_SET(pchunk)){++thisdir->sack_count;}
         else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
