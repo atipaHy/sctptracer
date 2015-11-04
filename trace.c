@@ -309,12 +309,18 @@ tv_cmp(struct timeval lhs, struct timeval rhs)
 	return(-1);
 }
 
-
-
 /* copy the IP addresses and port numbers into an addrblock structure	*/
 /* in addition to copying the address, we also create a HASH value	*/
 /* which is based on BOTH IP addresses and port numbers.  It allows	*/
 /* faster comparisons most of the time					*/
+void SetHash(
+    tcp_pair_addrblock *ptpa)
+{
+    ptpa->hash = ptpa->a_address.un.ip4.s_addr
+	    + ptpa->b_address.un.ip4.s_addr
+	    + ptpa->a_port + ptpa->b_port;
+}
+
 void
 CopyAddr(
     tcp_pair_addrblock *ptpa,
@@ -1844,6 +1850,9 @@ get_assoc_ip(
                             pair->a_address.addr_vers = 4;
                             pair->next = NULL;
                             pair->a_address.un.ip4.s_addr = ipv4;
+                            pair->a_port = thisdir->ptp->addr_pair.a_port;
+                            pair->b_address.un.ip4.s_addr = 0;
+                            pair->b_port = 0;
                         }
                         assoc_pair = assoc_pair->next;
                     }
@@ -1852,19 +1861,27 @@ get_assoc_ip(
                 {
                     while(assoc_pair->b_address.un.ip4.s_addr != ipv4)
                     {
-                        if(assoc_pair->next == NULL)
+                        if(assoc_pair->b_address.un.ip4.s_addr == 0)
+                        {
+                            assoc_pair->b_address.addr_vers = 4;
+                            assoc_pair->b_address.un.ip4.s_addr = ipv4;
+                            assoc_pair->b_port = thisdir->ptp->addr_pair.b_port;
+                        }
+                        else if(assoc_pair->next == NULL)
                         {
                             tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
                             assoc_pair->next = pair;
-                            pair->a_address.addr_vers = 4;
+                            pair->b_address.addr_vers = 4;
                             pair->next = NULL;
                             pair->b_address.un.ip4.s_addr = ipv4;
+                            pair->b_port = thisdir->ptp->addr_pair.b_port;
                         }
-                        assoc_pair = assoc_pair->next;
+                        if(assoc_pair->next != NULL)
+                            assoc_pair = assoc_pair->next;
+                        else
+                            break;
                     }
                 }
-                
-                
                 pip4 = tmp + 4;
             }
 
@@ -2070,20 +2087,20 @@ dosctptrace(
  //               }
  //           }
         }
-        else if(SACK_SET(pchunk)){++thisdir->sack_count;}
-        else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
-        else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
-        else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
-        else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
-        else if(SDACK_SET(pchunk)){++thisdir->shutdown_ack_count;}
-        else if(ERR_SET(pchunk)){++thisdir->error_count;}
-        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_echo_count;}
-        else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
-        else if(ECNE_SET(pchunk)){++thisdir->ecne_count;}
-        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_count;}
-        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_complete_count;}
-        else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
-        else {++thisdir->other_count;}
+        else if(SACK_SET(pchunk))       {++thisdir->sack_count;}
+        else if(HB_SET(pchunk))         {++thisdir->heartbeat_count;}
+        else if(HBACK_SET(pchunk))      {++thisdir->heartbeat_ack_count;}
+        else if(ABORT_SET(pchunk))      {++thisdir->abort_count;}
+        else if(SD_SET(pchunk))         {++thisdir->shutdown_count;}
+        else if(SDACK_SET(pchunk))      {++thisdir->shutdown_ack_count;}
+        else if(ERR_SET(pchunk))        {++thisdir->error_count;}
+        else if(COOKECHO_SET(pchunk))   {++thisdir->cookie_echo_count;}
+        else if(COOKACK_SET(pchunk))    {++thisdir->cookie_ack_count;}
+        else if(ECNE_SET(pchunk))       {++thisdir->ecne_count;}
+        else if(CWRSCTP_SET(pchunk))    {++thisdir->cwr_count;}
+        else if(SDCOMP_SET(pchunk))     {++thisdir->shutdown_complete_count;}
+        else if(AUTH_SET(pchunk))       {++thisdir->auth_count;}
+        else                            {++thisdir->other_count;}
         ++thisdir->chunk_count;        
         
         /* idle-time stats */
