@@ -2086,22 +2086,7 @@ dosctptrace(
                   
  //               }
  //           }
-            tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
-            do
-            {
-                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
-                printf("Port A: %d\tPort B:%d\n", assoc_pair->a_port, assoc_pair->b_port);
-                SetHash(assoc_pair);
-                hash hval = assoc_pair->hash % HASH_TABLE_SIZE;
-                ptp_snap **pptph_head = &ptp_hashtable[hval];
 
-                ptp_snap *ptph = MakePtpSnap();
-                ptph->addr_pair = thisdir->ptp->addr_pair;
-                ptph->ptp = thisdir->ptp;
-                SnapInsert(pptph_head, ptph);
-                
-                assoc_pair = assoc_pair->next;
-            }while(assoc_pair != NULL);
         }
         else if(SACK_SET(pchunk))       {++thisdir->sack_count;}
         else if(HB_SET(pchunk))         {++thisdir->heartbeat_count;}
