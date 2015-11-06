@@ -464,6 +464,10 @@ int
 	   return(B2A);
 #else /* BROKEN_COMPILER */
    /* same as first packet */
+//       printf("A: %s:%u", inet_ntoa(ptpa1->a_address.un.ip4));
+//       printf(", A2: %s\n", inet_ntoa(ptpa2->a_address.un.ip4));
+//       printf("B: %s", inet_ntoa(ptpa1->b_address.un.ip4));
+//       printf(", B2: %s\n", inet_ntoa(ptpa2->b_address.un.ip4));
    if (IP_SAMEADDR(&(ptpa1->a_address), &(ptpa2->a_address)) &&
        IP_SAMEADDR(&(ptpa1->b_address), &(ptpa2->b_address)) &&
        (ptpa1->a_port == ptpa2->a_port) &&
@@ -1061,6 +1065,7 @@ FindTTPsctp(
 	    }
 	    else {
 		ptp = (tcp_pair *)ptph->ptp;
+                           
 	    }
 	  
 	    /* figure out which direction this packet is going */
@@ -1094,6 +1099,7 @@ FindTTPsctp(
    
    
     /* Didn't find it, make a new one, if possible */
+    printf("Making new snap\n");
     if (0) {
 	printf("trace.c:FindTTP() calling MakePtpSnap()\n");
     }
@@ -1967,6 +1973,7 @@ dosctptrace(
       fprintf(stderr, "Did not initialize sctp pair pointer\n");
       exit(1);
     }
+    
 
     /* do time stats */
     if (ZERO_TIME(&ptp_save->first_time)) {
@@ -2040,52 +2047,40 @@ dosctptrace(
         
         
             /* Association creation*/
-//            printf("New INITACK\n");
-//        
-//            tcp_pair_addrblock *adblck = &thisdir->ptp->addr_pair;
-//            tcp_pair_addrblock *adblck2 = &thisdir->ptp->addr_pair;
-//            
-//            for(; adblck!=NULL; adblck = adblck->next)
-//            {
-//                printf("\nA: %s:%u", inet_ntoa(adblck->a_address.un.ip4), adblck->a_port);
-//                printf(", B: %s:%u\n", inet_ntoa(adblck->b_address.un.ip4), adblck->b_port);
-//            }
-//            
-//            for(adblck = &thisdir->ptp->addr_pair; adblck!=NULL; adblck = adblck->next)
-//            {
-//                //printf("A: %s\n", inet_ntoa(adblck->a_address.un.ip4));
-//                printf("A: %s:%u, B: %s:%u\n", 
-//                            inet_ntoa(adblck->a_address.un.ip4), adblck->a_port,
-//                            inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
-//                adblck2 = &thisdir->ptp->addr_pair;
-//                printf("\n\n");
-//                for(; adblck2 != NULL; adblck2 = adblck2->next)
-//                {
-//                    printf("A: %s:%u, B: %s:%u\n", 
-//                            inet_ntoa(adblck->a_address.un.ip4), adblck->a_port,
-//                            inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
-//                    ptp_snap **pptph_head = NULL;
-//                    ptp_snap *ptph;
-//                    //printf("B: %s\n", inet_ntoa(adblck2->b_address.un.ip4));
-//                    hash calchash = (adblck->a_address.un.ip4.s_addr 
-//                            + adblck2->b_address.un.ip4.s_addr 
-//                            + adblck->a_port + adblck2->b_port);
-//                    hash hval = calchash % HASH_TABLE_SIZE;
-//                    
-//                    pptph_head = &ptp_hashtable[hval];
-//                    ptph = MakePtpSnap();
-//                    ptph->addr_pair.a_address = adblck->a_address;
-//                    ptph->addr_pair.a_port = adblck->a_port;
-//                    ptph->addr_pair.b_address = adblck2->b_address;
-//                    ptph->addr_pair.b_port = adblck2->b_port;
-//                    ptph->addr_pair.hash = hval;
-//                   
-//                    ptph->ptp = &sctp_ptr;
-//                        
-//                    SnapInsert(pptph_head, ptph);
+            printf("New INITACK\n");
+        
+            tcp_pair_addrblock *adblck = &thisdir->ptp->addr_pair;
+            tcp_pair_addrblock *adblck2 = &thisdir->ptp->addr_pair;
+                 
+            for(adblck = &thisdir->ptp->addr_pair; adblck!=NULL; adblck = adblck->next)
+            {
+                for(adblck2 = &thisdir->ptp->addr_pair; adblck2 != NULL; adblck2 = adblck2->next)
+                {
+//                    printf("A: %s:%u", inet_ntoa(adblck->a_address.un.ip4), adblck->a_port);
+//                    printf(", B: %s:%u\, inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
+
+                    ptp_snap **pptph_head = NULL;
+                    ptp_snap *ptph;
+                    
+                    hash calchash = (adblck->a_address.un.ip4.s_addr 
+                            + adblck2->b_address.un.ip4.s_addr 
+                            + adblck->a_port + adblck2->b_port);
+                    hash hval = calchash % HASH_TABLE_SIZE;
+                    
+                    pptph_head = &ptp_hashtable[hval];
+                    ptph = MakePtpSnap();
+                    ptph->addr_pair.a_address = adblck->a_address;
+                    ptph->addr_pair.a_port = adblck->a_port;
+                    ptph->addr_pair.b_address = adblck2->b_address;
+                    ptph->addr_pair.b_port = adblck2->b_port;
+                    ptph->addr_pair.hash = hval;
+                   
+                    ptph->ptp = thisdir->ptp;
+                        
+                    SnapInsert(pptph_head, ptph);
                   
- //               }
- //           }
+                }
+            }
 
         }
         else if(SACK_SET(pchunk))       {++thisdir->sack_count;}
