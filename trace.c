@@ -2313,9 +2313,6 @@ dosctptrace(
             thisdir->fsack_req = 1;
         }
   
-        if ((SACK_SET(pchunk))) {
-            ++thisdir->sack_count;
-        }
         /* unless both sides advertised sack, we shouldn't see them, otherwise
            we hope they actually send them */
             thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    
