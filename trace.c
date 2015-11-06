@@ -1099,7 +1099,6 @@ FindTTPsctp(
    
    
     /* Didn't find it, make a new one, if possible */
-    printf("Making new snap\n");
     if (0) {
 	printf("trace.c:FindTTP() calling MakePtpSnap()\n");
     }
@@ -2038,16 +2037,8 @@ dosctptrace(
         }
         else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 1); ++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 0); ++thisdir->init_ack_count;
-//        tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
-//            do
-//            {
-//                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
-//                assoc_pair = assoc_pair->next;
-//            }while(assoc_pair->next != NULL);
-        
-        
+  
             /* Association creation*/
-            printf("New INITACK\n");
         
             tcp_pair_addrblock *adblck = &thisdir->ptp->addr_pair;
             tcp_pair_addrblock *adblck2 = &thisdir->ptp->addr_pair;
@@ -2056,8 +2047,6 @@ dosctptrace(
             {
                 for(adblck2 = &thisdir->ptp->addr_pair; adblck2 != NULL; adblck2 = adblck2->next)
                 {
-//                    printf("A: %s:%u", inet_ntoa(adblck->a_address.un.ip4), adblck->a_port);
-//                    printf(", B: %s:%u\, inet_ntoa(adblck2->b_address.un.ip4), adblck2->b_port);
 
                     ptp_snap **pptph_head = NULL;
                     ptp_snap *ptph;
