@@ -2379,7 +2379,6 @@ dosctptrace(
             ptofield = ptmp2 + 4;
             tsnack = ntohl(*ptofield);
                 
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
                 sack_type = sack_in(otherdir,tsnack,sctp_data_length,eff_win);
 
                 if ( (tsnack == (otherdir->syn+1)) &&

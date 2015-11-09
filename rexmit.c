@@ -578,7 +578,7 @@ rtt_retrans (tcb * ptcb,
 
 
 //////////////////////////////////////
-/*Christos sack_in fck*/
+/*Christos sack_in*/
 //////////////////////////////////////
 enum t_ack
 sack_in (tcb * ptcb,
