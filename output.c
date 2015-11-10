@@ -734,6 +734,86 @@ tcp_pair *ptp)
     {
         pab->packets += tmpptr->a2b.packets;
         pba->packets += tmpptr->b2a.packets;
+        
+        pab->abort_count += tmpptr->a2b.abort_count;
+        pba->abort_count += tmpptr->b2a.abort_count;
+        
+        pab->chunk_count += tmpptr->a2b.chunk_count;
+        pba->chunk_count += tmpptr->b2a.chunk_count;
+        
+        pab->data_count += tmpptr->a2b.data_count;
+        pba->data_count += tmpptr->b2a.data_count;
+        
+        pab->cookie_echo_count += tmpptr->a2b.cookie_echo_count;
+        pba->cookie_echo_count += tmpptr->b2a.cookie_echo_count;
+        
+        pab->cookie_ack_count += tmpptr->a2b.cookie_ack_count;
+        pba->cookie_ack_count += tmpptr->b2a.cookie_ack_count;
+        
+        pab->data_bytes += tmpptr->a2b.data_bytes;
+        pba->data_bytes += tmpptr->b2a.data_bytes;
+        
+        pab->auth_count += tmpptr->a2b.auth_count;
+        pba->auth_count += tmpptr->b2a.auth_count;
+        
+        pab->cwr_count += tmpptr->a2b.cwr_count;
+        pba->cwr_count += tmpptr->b2a.cwr_count;
+        
+        pab->ecne_count += tmpptr->a2b.ecne_count;
+        pba->ecne_count += tmpptr->b2a.ecne_count;
+        
+        pab->heartbeat_count += tmpptr->a2b.heartbeat_count;
+        pba->heartbeat_count += tmpptr->b2a.heartbeat_count;
+        
+        pab->heartbeat_ack_count += tmpptr->a2b.heartbeat_ack_count;
+        pba->heartbeat_ack_count += tmpptr->b2a.heartbeat_ack_count;
+        
+        pab->init_ack_count += tmpptr->a2b.init_ack_count;
+        pba->init_ack_count += tmpptr->b2a.init_ack_count;
+        
+        pab->init_count += tmpptr->a2b.init_count;
+        pba->init_count += tmpptr->b2a.init_count;
+        
+        pab->other_count += tmpptr->a2b.other_count;
+        pba->other_count += tmpptr->b2a.other_count;
+        
+        pab->out_order_pkts += tmpptr->a2b.out_order_pkts;
+        pba->out_order_pkts += tmpptr->b2a.out_order_pkts;
+        
+        pab->pureack_pkts += tmpptr->a2b.pureack_pkts;
+        pba->pureack_pkts += tmpptr->b2a.pureack_pkts;
+        
+        pab->rexmit_pkts += tmpptr->a2b.rexmit_pkts;
+        pba->rexmit_pkts += tmpptr->b2a.rexmit_pkts;
+        
+        pab->rexmit_bytes += tmpptr->a2b.rexmit_bytes;
+        pba->rexmit_bytes += tmpptr->b2a.rexmit_bytes;
+        
+        pab->sack_count += tmpptr->a2b.sack_count;
+        pba->sack_count += tmpptr->b2a.sack_count;
+        
+        pab->shutdown_count += tmpptr->a2b.shutdown_count;
+        pba->shutdown_count += tmpptr->b2a.shutdown_count;
+        
+        pab->shutdown_ack_count += tmpptr->a2b.shutdown_ack_count;
+        pba->shutdown_ack_count += tmpptr->b2a.shutdown_ack_count;
+        
+        pab->shutdown_complete_count += tmpptr->a2b.shutdown_complete_count;
+        pba->shutdown_complete_count += tmpptr->b2a.shutdown_complete_count;
+                
+        if (ZERO_TIME(&ptp->first_time)) {
+            ptp->first_time = tmpptr->first_time;
+            ptp->last_time = tmpptr->last_time;
+        }
+        else if(!ZERO_TIME(&tmpptr->first_time))
+        {
+            if(LESS_TIME(&tmpptr->first_time, &ptp->first_time))
+                {ptp->first_time = tmpptr->first_time;}
+            if(LESS_TIME(&ptp->last_time, &tmpptr->first_time))
+                {ptp->last_time = tmpptr->last_time;}
+        }
+        
+        
         tmpptr = tmpptr->next;
     }
     

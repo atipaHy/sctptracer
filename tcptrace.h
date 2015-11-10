@@ -238,6 +238,7 @@ typedef struct ipaddr {
 /* type for a timestamp */
 typedef struct timeval timeval;
 #define ZERO_TIME(ptv)(((ptv)->tv_sec == 0) && ((ptv)->tv_usec == 0))
+#define LESS_TIME(ptv, ptv2) (((ptv)->tv_sec < (ptv2)->tv_sec) || ((ptv)->tv_sec == (ptv2)->tv_sec && (ptv)->tv_usec < (ptv2)->tv_usec))
 
 
 /* type for a Boolean */
