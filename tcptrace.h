@@ -577,6 +577,8 @@ struct tcp_pair_addrblock{
 
 
 struct sctp_pair {
+    
+    struct sctp_pair    *next;
     /* are we ignoring this one?? */
     Bool		ignore_pair;
 

@@ -1137,8 +1137,11 @@ FindTTPsctp(
     }
     else {
 	tcp_pair *tmp = NewTTPsctp(pip,psctp);
-	ptph->addr_pair = tmp->addr_pair;
-	ptph->ptp = tmp;
+        tcp_pair *tmp2 = NewTTPsctp(pip, psctp);
+        num_sctp_pairs--; //removing path from assoclist
+        tmp->next = tmp2; //connecting assoc
+	ptph->addr_pair = tmp2->addr_pair;
+	ptph->ptp = tmp2;
     }
 
     /* To insert the new connection snapshot into the AVL tree */
@@ -2064,7 +2067,18 @@ dosctptrace(
                     ptph->addr_pair.b_port = adblck2->b_port;
                     ptph->addr_pair.hash = hval;
                    
-                    ptph->ptp = thisdir->ptp;
+                    //ptph->ptp = thisdir->ptp;
+                    ptph->ptp = NewTTPsctp(pip, psctp);
+                    num_sctp_pairs--;
+                    
+                    tcp_pair* tmpptr = &thisdir->ptp;
+                    
+                    while(tmpptr->next != NULL)
+                    {
+                        printf("tmpchunks: %s\n", tmpptr->a2b.host_letter);
+                        tmpptr = tmpptr->next;
+                    }
+                    tmpptr->next = ptph->ptp;
                         
                     SnapInsert(pptph_head, ptph);
                   
