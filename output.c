@@ -727,9 +727,8 @@ tcp_pair *ptp)
     char bufl[40],bufr[40];
     stream_info *unique_stream_list = NULL;
     
-    
+    /* Add path data to association */
     tcp_pair *tmpptr = ptp->next;
-    
     while(tmpptr != NULL)
     {
         pab->packets += tmpptr->a2b.packets;
@@ -800,12 +799,14 @@ tcp_pair *ptp)
         
         pab->shutdown_complete_count += tmpptr->a2b.shutdown_complete_count;
         pba->shutdown_complete_count += tmpptr->b2a.shutdown_complete_count;
-                
-        if (ZERO_TIME(&ptp->first_time)) {
+        
+        /* Initiate time */
+        if (ZERO_TIME(&ptp->first_time)) { 
             ptp->first_time = tmpptr->first_time;
             ptp->last_time = tmpptr->last_time;
         }
-        else if(!ZERO_TIME(&tmpptr->first_time))
+        /* Set earlier and later times if found */
+        else if(!ZERO_TIME(&tmpptr->first_time)) //prevent to accidentaly add faulty times
         {
             if(LESS_TIME(&tmpptr->first_time, &ptp->first_time))
                 {ptp->first_time = tmpptr->first_time;}
