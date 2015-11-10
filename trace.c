@@ -2067,17 +2067,27 @@ dosctptrace(
                     ptph->addr_pair.b_port = adblck2->b_port;
                     ptph->addr_pair.hash = hval;
                    
-                    //ptph->ptp = thisdir->ptp;
+                    /* Add new path for association */
                     ptph->ptp = NewTTPsctp(pip, psctp);
                     num_sctp_pairs--;
                     
-                    tcp_pair* tmpptr = &thisdir->ptp;
+                    /* Change ip and ports to correct ones */
+                    tcp_pair* tmp2 = ptph->ptp;
+                    tmp2->a_hostname = strdup(HostName(ptph->addr_pair.a_address));
+                    tmp2->a_portname = strdup(ServiceName(ptph->addr_pair.a_port));
+                    tmp2->a_endpoint =
+                        strdup(EndpointName(ptph->addr_pair.a_address,
+			tmp2->addr_pair.a_port));
+                    tmp2->b_hostname = strdup(HostName(ptph->addr_pair.b_address));
+                    tmp2->b_portname = strdup(ServiceName(ptph->addr_pair.b_port));
+                    tmp2->b_endpoint =
+                        strdup(EndpointName(ptph->addr_pair.b_address,
+			tmp2->addr_pair.b_port));
                     
+                    /* Add path to assoctail */
+                    tcp_pair* tmpptr = &thisdir->ptp;
                     while(tmpptr->next != NULL)
-                    {
-                        printf("tmpchunks: %s\n", tmpptr->a2b.host_letter);
                         tmpptr = tmpptr->next;
-                    }
                     tmpptr->next = ptph->ptp;
                         
                     SnapInsert(pptph_head, ptph);
