@@ -309,12 +309,18 @@ tv_cmp(struct timeval lhs, struct timeval rhs)
 	return(-1);
 }
 
-
-
 /* copy the IP addresses and port numbers into an addrblock structure	*/
 /* in addition to copying the address, we also create a HASH value	*/
 /* which is based on BOTH IP addresses and port numbers.  It allows	*/
 /* faster comparisons most of the time					*/
+void SetHash(
+    tcp_pair_addrblock *ptpa)
+{
+    ptpa->hash = ptpa->a_address.un.ip4.s_addr
+	    + ptpa->b_address.un.ip4.s_addr
+	    + ptpa->a_port + ptpa->b_port;
+}
+
 void
 CopyAddr(
     tcp_pair_addrblock *ptpa,
@@ -458,6 +464,10 @@ int
 	   return(B2A);
 #else /* BROKEN_COMPILER */
    /* same as first packet */
+//       printf("A: %s:%u", inet_ntoa(ptpa1->a_address.un.ip4));
+//       printf(", A2: %s\n", inet_ntoa(ptpa2->a_address.un.ip4));
+//       printf("B: %s", inet_ntoa(ptpa1->b_address.un.ip4));
+//       printf(", B2: %s\n", inet_ntoa(ptpa2->b_address.un.ip4));
    if (IP_SAMEADDR(&(ptpa1->a_address), &(ptpa2->a_address)) &&
        IP_SAMEADDR(&(ptpa1->b_address), &(ptpa2->b_address)) &&
        (ptpa1->a_port == ptpa2->a_port) &&
@@ -1055,6 +1065,7 @@ FindTTPsctp(
 	    }
 	    else {
 		ptp = (tcp_pair *)ptph->ptp;
+                           
 	    }
 	  
 	    /* figure out which direction this packet is going */
@@ -1126,8 +1137,11 @@ FindTTPsctp(
     }
     else {
 	tcp_pair *tmp = NewTTPsctp(pip,psctp);
-	ptph->addr_pair = tmp->addr_pair;
-	ptph->ptp = tmp;
+        tcp_pair *tmp2 = NewTTPsctp(pip, psctp);
+        num_sctp_pairs--; //removing path from assoclist
+        tmp->next = tmp2; //connecting assoc
+	ptph->addr_pair = tmp2->addr_pair;
+	ptph->ptp = tmp2;
     }
 
     /* To insert the new connection snapshot into the AVL tree */
@@ -1844,6 +1858,9 @@ get_assoc_ip(
                             pair->a_address.addr_vers = 4;
                             pair->next = NULL;
                             pair->a_address.un.ip4.s_addr = ipv4;
+                            pair->a_port = thisdir->ptp->addr_pair.a_port;
+                            pair->b_address.un.ip4.s_addr = 0;
+                            pair->b_port = 0;
                         }
                         assoc_pair = assoc_pair->next;
                     }
@@ -1852,19 +1869,27 @@ get_assoc_ip(
                 {
                     while(assoc_pair->b_address.un.ip4.s_addr != ipv4)
                     {
-                        if(assoc_pair->next == NULL)
+                        if(assoc_pair->b_address.un.ip4.s_addr == 0)
+                        {
+                            assoc_pair->b_address.addr_vers = 4;
+                            assoc_pair->b_address.un.ip4.s_addr = ipv4;
+                            assoc_pair->b_port = thisdir->ptp->addr_pair.b_port;
+                        }
+                        else if(assoc_pair->next == NULL)
                         {
                             tcp_pair_addrblock* pair = malloc(sizeof(tcp_pair_addrblock));
                             assoc_pair->next = pair;
-                            pair->a_address.addr_vers = 4;
+                            pair->b_address.addr_vers = 4;
                             pair->next = NULL;
                             pair->b_address.un.ip4.s_addr = ipv4;
+                            pair->b_port = thisdir->ptp->addr_pair.b_port;
                         }
-                        assoc_pair = assoc_pair->next;
+                        if(assoc_pair->next != NULL)
+                            assoc_pair = assoc_pair->next;
+                        else
+                            break;
                     }
                 }
-                
-                
                 pip4 = tmp + 4;
             }
 
@@ -1950,6 +1975,7 @@ dosctptrace(
       fprintf(stderr, "Did not initialize sctp pair pointer\n");
       exit(1);
     }
+    
 
     /* do time stats */
     if (ZERO_TIME(&ptp_save->first_time)) {
@@ -2014,27 +2040,76 @@ dosctptrace(
         }
         else if(INIT_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 1); ++thisdir->init_count;}
         else if(INITACK_SET(pchunk)){get_assoc_ip(pchunk, chunklength, thisdir, 0); ++thisdir->init_ack_count;
-//        tcp_pair_addrblock *assoc_pair = &thisdir->ptp->addr_pair;
-//            do
-//            {
-//                printf("A: %s\tB: %s\n", inet_ntoa(assoc_pair->a_address.un.ip4), inet_ntoa(assoc_pair->b_address.un.ip4));
-//                assoc_pair = assoc_pair->next;
-//            }while(assoc_pair->next != NULL);
+  
+            /* Association creation*/
+        
+            tcp_pair_addrblock *adblck = &thisdir->ptp->addr_pair;
+            tcp_pair_addrblock *adblck2 = &thisdir->ptp->addr_pair;
+                 
+            for(adblck = &thisdir->ptp->addr_pair; adblck!=NULL; adblck = adblck->next)
+            {
+                for(adblck2 = &thisdir->ptp->addr_pair; adblck2 != NULL; adblck2 = adblck2->next)
+                {
+
+                    ptp_snap **pptph_head = NULL;
+                    ptp_snap *ptph;
+                    
+                    hash calchash = (adblck->a_address.un.ip4.s_addr 
+                            + adblck2->b_address.un.ip4.s_addr 
+                            + adblck->a_port + adblck2->b_port);
+                    hash hval = calchash % HASH_TABLE_SIZE;
+                    
+                    pptph_head = &ptp_hashtable[hval];
+                    ptph = MakePtpSnap();
+                    ptph->addr_pair.a_address = adblck->a_address;
+                    ptph->addr_pair.a_port = adblck->a_port;
+                    ptph->addr_pair.b_address = adblck2->b_address;
+                    ptph->addr_pair.b_port = adblck2->b_port;
+                    ptph->addr_pair.hash = hval;
+                   
+                    /* Add new path for association */
+                    ptph->ptp = NewTTPsctp(pip, psctp);
+                    num_sctp_pairs--;
+                    
+                    /* Change ip and ports to correct ones */
+                    tcp_pair* tmp2 = ptph->ptp;
+                    tmp2->a_hostname = strdup(HostName(ptph->addr_pair.a_address));
+                    tmp2->a_portname = strdup(ServiceName(ptph->addr_pair.a_port));
+                    tmp2->a_endpoint =
+                        strdup(EndpointName(ptph->addr_pair.a_address,
+			tmp2->addr_pair.a_port));
+                    tmp2->b_hostname = strdup(HostName(ptph->addr_pair.b_address));
+                    tmp2->b_portname = strdup(ServiceName(ptph->addr_pair.b_port));
+                    tmp2->b_endpoint =
+                        strdup(EndpointName(ptph->addr_pair.b_address,
+			tmp2->addr_pair.b_port));
+                    
+                    /* Add path to assoctail */
+                    tcp_pair* tmpptr = &thisdir->ptp;
+                    while(tmpptr->next != NULL)
+                        tmpptr = tmpptr->next;
+                    tmpptr->next = ptph->ptp;
+                        
+                    SnapInsert(pptph_head, ptph);
+                  
+                }
+            }
+
         }
-        else if(SACK_SET(pchunk)){++thisdir->sack_count;}
-        else if(HB_SET(pchunk)){++thisdir->heartbeat_count;}
-        else if(HBACK_SET(pchunk)){++thisdir->heartbeat_ack_count;}
-        else if(ABORT_SET(pchunk)){++thisdir->abort_count;}
-        else if(SD_SET(pchunk)){ ++thisdir->shutdown_count;}
-        else if(SDACK_SET(pchunk)){++thisdir->shutdown_ack_count;}
-        else if(ERR_SET(pchunk)){++thisdir->error_count;}
-        else if(COOKECHO_SET(pchunk)){++thisdir->cookie_echo_count;}
-        else if(COOKACK_SET(pchunk)){++thisdir->cookie_ack_count;}
-        else if(ECNE_SET(pchunk)){++thisdir->ecne_count;}
-        else if(CWRSCTP_SET(pchunk)){++thisdir->cwr_count;}
-        else if(SDCOMP_SET(pchunk)){++thisdir->shutdown_complete_count;}
-        else if(AUTH_SET(pchunk)){++thisdir->auth_count;}
-        else {++thisdir->other_count;}
+        else if(SACK_SET(pchunk))       {++thisdir->sack_count;}
+        else if(HB_SET(pchunk))         {++thisdir->heartbeat_count;}
+        else if(HBACK_SET(pchunk))      {++thisdir->heartbeat_ack_count;}
+        else if(ABORT_SET(pchunk))      {++thisdir->abort_count;}
+        else if(SD_SET(pchunk))         {++thisdir->shutdown_count;}
+        else if(SDACK_SET(pchunk))      {++thisdir->shutdown_ack_count;}
+        else if(ERR_SET(pchunk))        {++thisdir->error_count;}
+        else if(COOKECHO_SET(pchunk))   {++thisdir->cookie_echo_count;}
+        else if(COOKACK_SET(pchunk))    {++thisdir->cookie_ack_count;}
+        else if(ECNE_SET(pchunk))       {++thisdir->ecne_count;}
+        else if(CWRSCTP_SET(pchunk))    {++thisdir->cwr_count;}
+        else if(SDCOMP_SET(pchunk))     {++thisdir->shutdown_complete_count;}
+        else if(AUTH_SET(pchunk))       {++thisdir->auth_count;}
+        else                            {++thisdir->other_count;}
         ++thisdir->chunk_count;        
         
         /* idle-time stats */
@@ -2251,9 +2326,6 @@ dosctptrace(
             thisdir->fsack_req = 1;
         }
   
-        if ((SACK_SET(pchunk))) {
-            ++thisdir->sack_count;
-        }
         /* unless both sides advertised sack, we shouldn't see them, otherwise
            we hope they actually send them */
             thisdir->tcp_strain = otherdir->tcp_strain = TCP_SACK;    

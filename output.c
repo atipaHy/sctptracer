@@ -727,305 +727,409 @@ tcp_pair *ptp)
     char bufl[40],bufr[40];
     stream_info *unique_stream_list = NULL;
     
+    /* Add path data to association */
+    tcp_pair *tmpptr = ptp->next;
+    while(tmpptr != NULL)
+    {
+        pab->packets += tmpptr->a2b.packets;
+        pba->packets += tmpptr->b2a.packets;
+        
+        pab->abort_count += tmpptr->a2b.abort_count;
+        pba->abort_count += tmpptr->b2a.abort_count;
+        
+        pab->chunk_count += tmpptr->a2b.chunk_count;
+        pba->chunk_count += tmpptr->b2a.chunk_count;
+        
+        pab->data_count += tmpptr->a2b.data_count;
+        pba->data_count += tmpptr->b2a.data_count;
+        
+        pab->cookie_echo_count += tmpptr->a2b.cookie_echo_count;
+        pba->cookie_echo_count += tmpptr->b2a.cookie_echo_count;
+        
+        pab->cookie_ack_count += tmpptr->a2b.cookie_ack_count;
+        pba->cookie_ack_count += tmpptr->b2a.cookie_ack_count;
+        
+        pab->data_bytes += tmpptr->a2b.data_bytes;
+        pba->data_bytes += tmpptr->b2a.data_bytes;
+        
+        pab->auth_count += tmpptr->a2b.auth_count;
+        pba->auth_count += tmpptr->b2a.auth_count;
+        
+        pab->cwr_count += tmpptr->a2b.cwr_count;
+        pba->cwr_count += tmpptr->b2a.cwr_count;
+        
+        pab->ecne_count += tmpptr->a2b.ecne_count;
+        pba->ecne_count += tmpptr->b2a.ecne_count;
+        
+        pab->heartbeat_count += tmpptr->a2b.heartbeat_count;
+        pba->heartbeat_count += tmpptr->b2a.heartbeat_count;
+        
+        pab->heartbeat_ack_count += tmpptr->a2b.heartbeat_ack_count;
+        pba->heartbeat_ack_count += tmpptr->b2a.heartbeat_ack_count;
+        
+        pab->init_ack_count += tmpptr->a2b.init_ack_count;
+        pba->init_ack_count += tmpptr->b2a.init_ack_count;
+        
+        pab->init_count += tmpptr->a2b.init_count;
+        pba->init_count += tmpptr->b2a.init_count;
+        
+        pab->other_count += tmpptr->a2b.other_count;
+        pba->other_count += tmpptr->b2a.other_count;
+        
+        pab->out_order_pkts += tmpptr->a2b.out_order_pkts;
+        pba->out_order_pkts += tmpptr->b2a.out_order_pkts;
+        
+        pab->pureack_pkts += tmpptr->a2b.pureack_pkts;
+        pba->pureack_pkts += tmpptr->b2a.pureack_pkts;
+        
+        pab->rexmit_pkts += tmpptr->a2b.rexmit_pkts;
+        pba->rexmit_pkts += tmpptr->b2a.rexmit_pkts;
+        
+        pab->rexmit_bytes += tmpptr->a2b.rexmit_bytes;
+        pba->rexmit_bytes += tmpptr->b2a.rexmit_bytes;
+        
+        pab->sack_count += tmpptr->a2b.sack_count;
+        pba->sack_count += tmpptr->b2a.sack_count;
+        
+        pab->shutdown_count += tmpptr->a2b.shutdown_count;
+        pba->shutdown_count += tmpptr->b2a.shutdown_count;
+        
+        pab->shutdown_ack_count += tmpptr->a2b.shutdown_ack_count;
+        pba->shutdown_ack_count += tmpptr->b2a.shutdown_ack_count;
+        
+        pab->shutdown_complete_count += tmpptr->a2b.shutdown_complete_count;
+        pba->shutdown_complete_count += tmpptr->b2a.shutdown_complete_count;
+        
+        /* Initiate time */
+        if (ZERO_TIME(&ptp->first_time)) { 
+            ptp->first_time = tmpptr->first_time;
+            ptp->last_time = tmpptr->last_time;
+        }
+        /* Set earlier and later times if found */
+        else if(!ZERO_TIME(&tmpptr->first_time)) //prevent to accidentaly add faulty times
+        {
+            if(LESS_TIME(&tmpptr->first_time, &ptp->first_time))
+                {ptp->first_time = tmpptr->first_time;}
+            if(LESS_TIME(&ptp->last_time, &tmpptr->first_time))
+                {ptp->last_time = tmpptr->last_time;}
+        }
+        
+        
+        tmpptr = tmpptr->next;
+    }
+    
+    
     /*print which print-function we are using*/
     printf("\n----------------SCTP-PRINT----------------\n");
-   
-    /* counters to use for seq. space wrap around calculations
-     */
-    u_llong stream_length_pab=0, stream_length_pba=0;
-    u_long pab_last, pba_last;
+    do
+    {
+        pab = &ptp->a2b;
+        pba = &ptp->b2a;
+        if(pab->packets == 0 && pba->packets == 0)
+        {
+            ptp = ptp->next;
+            if(ptp == NULL)
+                break;
+            continue;
+        }
+        /* counters to use for seq. space wrap around calculations
+         */
+        u_llong stream_length_pab=0, stream_length_pba=0;
+        u_long pab_last, pba_last;
 
-   /* Reset the counter for each connection */
-   sv_print_count = 1; /* The first field (conn_#) gets printed in trace.c */
-   
+       /* Reset the counter for each connection */
+       sv_print_count = 1; /* The first field (conn_#) gets printed in trace.c */
 
-    /* calculate elapsed time */
-    etime = elapsed(ptp->first_time,ptp->last_time);
-    etime_secs = etime / 1000000.0;
-    etime_usecs = 1000000 * (etime/1000000.0 - (double)etime_secs);
 
-    /* Check if comma-separated-values or tab-separated-values
-     * has been requested.
-     */ 
-   if(csv || tsv || (sv != NULL)) {
-       fprintf(stdout,"%s%s%s%s%s%s%s%s",
-	       ptp->a_hostname, sp, ptp->b_hostname, sp,
-	       ptp->a_portname, sp, ptp->b_portname, sp);
-       sv_print_count += 4;
-       /* Print the start and end times. In other words,
-	* print the time of the first and the last packet
-	*/ 
-       fprintf(stdout,"%ld.%ld %s %ld.%ld %s",
-	       (long)ptp->first_time.tv_sec, (long)ptp->first_time.tv_usec, sp,
-	       (long)ptp->last_time.tv_sec, (long)ptp->last_time.tv_usec, sp);
-       sv_print_count += 2;      
-    }
-    else {
-       fprintf(stdout,"\thost %-4s      %s\n",
-	       (snprintf(bufl,sizeof(bufl),"%s:", host1),bufl), ptp->a_endpoint);
-       fprintf(stdout,"\thost %-4s      %s\n",
-	       (snprintf(bufl,sizeof(bufl),"%s:", host2),bufl), ptp->b_endpoint);
-       fprintf(stdout,"\tcomplete conn: %s",
-	       ConnAbort(ptp)?"RESET":(
-				       SctpConnComplete(ptp)?"yes":"no"));
-       if (SctpConnComplete(ptp))
-	 fprintf(stdout,"\n");
-       else
-	 fprintf(stdout,"\t(INITs: %u)  (SHUTDOWNs: %u)\n",
-		 InitCount(ptp), ShutdownCount(ptp));
-       
-       fprintf(stdout,"\tfirst packet:  %s\n", ts2ascii(&ptp->first_time));
-       fprintf(stdout,"\tlast packet:   %s\n", ts2ascii(&ptp->last_time));
-       
-       fprintf(stdout,"\telapsed time:  %s\n", elapsed2str(etime));
-       
-       fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
-       fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list));
-       
-       fprintf(stdout,"\tfilename:      %s\n", ptp->filename);
-       
-       fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
-	       host1,host2,host2,host1);
-    }
-   
-    StatLineI("total packets","", pab->packets, pba->packets);
-    if (pab->abort_count || pba->abort_count || csv || tsv || (sv != NULL))
-	StatLineI("resets sent","", pab->abort_count, pba->abort_count);
-    StatLineI("total chunks","", pab->chunk_count, pba->chunk_count);
-    StatLineI("sack's sent","", pab->sack_count, pba->sack_count);
-    StatLineI("init ack's sent","", pab->init_ack_count, pba->init_ack_count);
-    StatLineI("heartbeat ack's sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
-    StatLineI("heartbeat's sent","", pab->heartbeat_count, pba->heartbeat_count);
-    StatLineI("shutdown ack's sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
-    StatLineI("cookie ack's sent","", pab->cookie_ack_count, pba->cookie_ack_count);
-    StatLineI("cookie echo's sent","", pab->cookie_echo_count, pba->cookie_echo_count);
-    StatLineI("abort's sent","", pab->abort_count, pba->abort_count);
-    StatLineI("error's sent","", pab->error_count, pba->error_count);
-    StatLineI("ecne's sent","", pab->ecne_count, pba->ecne_count);
-    StatLineI("cwr's sent","", pab->cwr_count, pba->cwr_count);
-    StatLineI("shutdown comp's sent","", pab->shutdown_complete_count, pba->shutdown_complete_count);
-    StatLineI("out of order's sent","", pab->out_order, pba->out_order);
-    StatLineI("other's sent","", pab->other_count, pba->other_count);
+        /* calculate elapsed time */
+        etime = elapsed(ptp->first_time,ptp->last_time);
+        etime_secs = etime / 1000000.0;
+        etime_usecs = 1000000 * (etime/1000000.0 - (double)etime_secs);
 
+        /* Check if comma-separated-values or tab-separated-values
+         * has been requested.
+         */ 
+       if(csv || tsv || (sv != NULL)) {
+           fprintf(stdout,"%s%s%s%s%s%s%s%s",
+                   ptp->a_hostname, sp, ptp->b_hostname, sp,
+                   ptp->a_portname, sp, ptp->b_portname, sp);
+           sv_print_count += 4;
+           /* Print the start and end times. In other words,
+            * print the time of the first and the last packet
+            */ 
+           fprintf(stdout,"%ld.%ld %s %ld.%ld %s",
+                   (long)ptp->first_time.tv_sec, (long)ptp->first_time.tv_usec, sp,
+                   (long)ptp->last_time.tv_sec, (long)ptp->last_time.tv_usec, sp);
+           sv_print_count += 2;      
+        }
+        else {
+           fprintf(stdout,"\thost %-4s      %s\n",
+                   (snprintf(bufl,sizeof(bufl),"%s:", host1),bufl), ptp->a_endpoint);
+           fprintf(stdout,"\thost %-4s      %s\n",
+                   (snprintf(bufl,sizeof(bufl),"%s:", host2),bufl), ptp->b_endpoint);
+           fprintf(stdout,"\tcomplete conn: %s",
+                   ConnAbort(ptp)?"RESET":(
+                                           SctpConnComplete(ptp)?"yes":"no"));
+           if (SctpConnComplete(ptp))
+             fprintf(stdout,"\n");
+           else
+             fprintf(stdout,"\t(INITs: %u)  (SHUTDOWNs: %u)\n",
+                     InitCount(ptp), ShutdownCount(ptp));
+
+           fprintf(stdout,"\tfirst packet:  %s\n", ts2ascii(&ptp->first_time));
+           fprintf(stdout,"\tlast packet:   %s\n", ts2ascii(&ptp->last_time));
+
+           fprintf(stdout,"\telapsed time:  %s\n", elapsed2str(etime));
+
+           fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
+           fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list));
+
+           fprintf(stdout,"\tfilename:      %s\n", ptp->filename);
+
+           fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
+                   host1,host2,host2,host1);
+        }
+
+        StatLineI("total packets","", pab->packets, pba->packets);
+        if (pab->abort_count || pba->abort_count || csv || tsv || (sv != NULL))
+            StatLineI("resets sent","", pab->abort_count, pba->abort_count);
+        StatLineI("total chunks","", pab->chunk_count, pba->chunk_count);
+        StatLineI("sack's sent","", pab->sack_count, pba->sack_count);
+        StatLineI("init ack's sent","", pab->init_ack_count, pba->init_ack_count);
+        StatLineI("heartbeat ack's sent","", pab->heartbeat_ack_count, pba->heartbeat_ack_count);
+        StatLineI("heartbeat's sent","", pab->heartbeat_count, pba->heartbeat_count);
+        StatLineI("shutdown ack's sent","", pab->shutdown_ack_count, pba->shutdown_ack_count);
+        StatLineI("cookie ack's sent","", pab->cookie_ack_count, pba->cookie_ack_count);
+        StatLineI("cookie echo's sent","", pab->cookie_echo_count, pba->cookie_echo_count);
+        StatLineI("abort's sent","", pab->abort_count, pba->abort_count);
+        StatLineI("error's sent","", pab->error_count, pba->error_count);
+        StatLineI("ecne's sent","", pab->ecne_count, pba->ecne_count);
+        StatLineI("cwr's sent","", pab->cwr_count, pba->cwr_count);
+        StatLineI("shutdown comp's sent","", pab->shutdown_complete_count, pba->shutdown_complete_count);
+        StatLineI("out of order's sent","", pab->out_order, pba->out_order);
+        StatLineI("other's sent","", pab->other_count, pba->other_count);
+
+
+        StatLineI("max sack blks/ack","", pab->max_sack_blocks, pba->max_sack_blocks);
+        StatLineI("unique bytes sent","",
+                  pab->unique_bytes, pba->unique_bytes);
+        StatLineI("actual data chunks","", pab->data_count, pba->data_count);
+        StatLineI("actual data bytes","", pab->data_bytes, pba->data_bytes);
+        StatLineI("rexmt data pkts","", pab->rexmit_pkts, pba->rexmit_pkts);
+        StatLineI("rexmt data bytes","",
+                  pab->rexmit_bytes, pba->rexmit_bytes);
+        StatLineI("zwnd probe pkts","", 
+                      pab->num_zwnd_probes, pba->num_zwnd_probes);
+        StatLineI("zwnd probe bytes","",
+                  pab->zwnd_probe_bytes, pba->zwnd_probe_bytes);
+        StatLineI("outoforder pkts","",
+                  pab->out_order_pkts, pba->out_order_pkts);
+        StatLineI("pushed data pkts","", pab->data_pkts_push, pba->data_pkts_push);
+        StatLineP("INIT/SHUTDOWN pkts sent","","%s",
+                  (snprintf(bufl,sizeof(bufl),"%d/%d",
+                           pab->init_count, pab->shutdown_count),bufl),
+                  (snprintf(bufr,sizeof(bufr),"%d/%d",
+                           pba->init_count, pba->shutdown_count),bufr));
+        if (pab->f1323_ws || pba->f1323_ws || pab->f1323_ts || pba->f1323_ts || csv || tsv || (sv != NULL)) {
+            StatLineP("req 1323 ws/ts","","%s",
+                      (snprintf(bufl,sizeof(bufl),"%c/%c",
+                          pab->f1323_ws?'Y':'N',pab->f1323_ts?'Y':'N'),bufl),
+                      (snprintf(bufr,sizeof(bufr),"%c/%c",
+                          pba->f1323_ws?'Y':'N',pba->f1323_ts?'Y':'N'),bufr));
+        }
+        if (pab->f1323_ws || pba->f1323_ws || csv || tsv || (sv != NULL)) {
+            StatLineI("adv wind scale","",
+                      (u_long)pab->window_scale, (u_long)pba->window_scale);
+        }
+        if (pab->fsack_req || pba->fsack_req || csv || tsv || (sv != NULL)) {
+            StatLineP("req sack","","%s",
+                      pab->fsack_req?"Y":"N",
+                      pba->fsack_req?"Y":"N");
+            StatLineI("sacks sent","",
+                      pab->sacks_sent,
+                      pba->sacks_sent);
+        }
+        StatLineI("urgent data pkts", "pkts",
+                  pab->urg_data_pkts,
+                  pba->urg_data_pkts);
+        StatLineI("urgent data bytes", "bytes",
+                  pab->urg_data_bytes,
+                  pba->urg_data_bytes);
+        StatLineI("mss requested","bytes", pab->mss, pba->mss);
+        StatLineI("max segm size","bytes",
+                  pab->max_seg_size,
+                  pba->max_seg_size);
+        StatLineI("min segm size","bytes",
+                  pab->min_seg_size,
+                  pba->min_seg_size);
+        StatLineI("avg payload size","bytes",
+                  (int)((double)pab->data_bytes / ((double)pab->chunk_count+.001)),
+                  (int)((double)pba->data_bytes / ((double)pba->chunk_count+.001)));
+        StatLineI("max win adv","bytes", pab->win_max, pba->win_max);
+        StatLineI("min win adv","bytes", pab->win_min, pba->win_min);
+        StatLineI("zero win adv","times",
+                  pab->win_zero_ct, pba->win_zero_ct);
+        // Average window advertisement is calculated only for window scaled pkts
+        // if we have seen this connection using window scaling.
+        // Otherwise, it is just the regular way of dividing the sum of 
+        // all window advertisements by the total number of packets.
+
+        if (pab->window_stats_updated_for_scaling &&
+            pba->window_stats_updated_for_scaling)
+              StatLineI("avg win adv","bytes",
+                        pab->win_scaled_pkts==0?0:
+                        (pab->win_tot/pab->win_scaled_pkts),
+                        pba->win_scaled_pkts==0?0:
+                        (pba->win_tot/pba->win_scaled_pkts));
+        else
+              StatLineI("avg win adv","bytes",
+                        pab->packets==0?0:pab->win_tot/pab->packets,
+                        pba->packets==0?0:pba->win_tot/pba->packets);
+        if (print_owin) {
+            StatLineI("max owin","bytes", pab->owin_max, pba->owin_max);
+            StatLineI("min non-zero owin","bytes", pab->owin_min, pba->owin_min);
+            StatLineI("avg owin","bytes",
+                      pab->owin_count==0?0:pab->owin_tot/pab->owin_count,
+                      pba->owin_count==0?0:pba->owin_tot/pba->owin_count);
+            if (etime == 0.0) {
+                    StatLineP("wavg owin", "", "%s", "NA", "NA");	
+            }
+            else {
+                    StatLineI("wavg owin","bytes", 
+                              (u_llong)(pab->owin_wavg/((double)etime/1000000)), 
+                              (u_llong)(pba->owin_wavg/((double)etime/1000000)));
+            } 
+        }
+        StatLineI("initial window","bytes",
+                  pab->initialwin_bytes, pba->initialwin_bytes);
+        StatLineI("initial window","pkts",
+                  pab->initialwin_segs, pba->initialwin_segs);
+
+        /* compare to theoretical length of the stream (not just what
+           we saw) using the SYN and FIN
+         * Seq. Space wrap around calculations:
+         * Calculate stream length using last_seq_num seen, first_seq_num
+         * seen and wrap_count.
+         * first_seq_num = syn
+         * If reset_set, last_seq_num = latest_seq
+         *          else last_seq_num = fin
+         */
+
+        pab_last = (pab->reset_count>0)?pab->latest_seq:pab->fin;
+
+        pba_last = (pba->reset_count>0)?pba->latest_seq:pba->fin;
+
+        /* calculating stream length for direction pab */
+        if ((pab->init_count > 0) && (pab->shutdown_count > 0)) {
+            if (pab->seq_wrap_count > 0) {
+                if (pab_last > pab->init) {
+                    stream_length_pab = pab_last + (MAX_32 * pab->seq_wrap_count) - pab->init - 1;
+                }
+                else {
+                    stream_length_pab = pab_last + (MAX_32 * (pab->seq_wrap_count+1)) - pab->init - 1;
+                }
+            }
+            else {
+                if (pab_last > pab->init) {
+                    stream_length_pab = pab_last - pab->init - 1;
+                }
+                else {
+                    stream_length_pab = MAX_32 + pab_last - pab->init - 1;
+                }
+            }
+        }
+
+        /* calculating stream length for direction pba */
+        if ((pba->init_count > 0) && (pba->shutdown_count > 0)) {
+            if (pba->seq_wrap_count > 0) {
+                if (pba_last > pba->init) {
+                    stream_length_pba = pba_last + (MAX_32 * pba->seq_wrap_count) - pba->init - 1;
+                }
+                else {
+                    stream_length_pba = pba_last + (MAX_32 * (pba->seq_wrap_count+1)) - pba->init - 1;
+                }
+            }
+            else {
+                if (pba_last > pba->init) {
+                    stream_length_pba = pba_last - pba->init - 1;
+                }
+                else {
+                    stream_length_pba = MAX_32 + pba_last - pba->init - 1;
+                }
+            }
+        }
+
+        /* print out values */
+        if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
+            char *format = "%8" FS_ULL;
+            StatLineFieldL("ttl stream length", "bytes", format, stream_length_pab, 0);
+        }
+        else {
+            StatLineField("ttl stream length", "", "%s", (u_long)"NA", 0);
+        }
+        if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
+            char *format = "%8" FS_ULL;
+            StatLineFieldL("ttl stream length", "bytes", format, stream_length_pba, 1);
+        }
+        else {
+            StatLineField("ttl stream length", "", "%s", (u_long)"NA", 1);
+        }
+
+        if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
+            char *format = "%8" FS_ULL;
+            StatLineFieldL("missed data", "bytes", format, (stream_length_pab - pab->unique_bytes), 0);
+        }
+        else {
+            StatLineField("missed data", "", "%s", (u_long)"NA", 0);
+        }
+        if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
+            char *format = "%8" FS_ULL;
+            StatLineFieldL("missed data", "bytes", format, (stream_length_pba - pba->unique_bytes), 1);
+        }
+        else {
+            StatLineField("missed data", "", "%s", (u_long)"NA", 1);
+        }
+
+        /* tell how much data was NOT captured in the files */
+        StatLineI("truncated data","bytes",
+                  pab->trunc_bytes, pba->trunc_bytes);
+        StatLineI("truncated packets","pkts",
+                  pab->trunc_segs, pba->trunc_segs);
+
+        /* stats on just the data */
+        etime_data1 = elapsed(pab->first_data_time,
+                              pab->last_data_time); /* in usecs */
+        etime_data2 = elapsed(pba->first_data_time,
+                              pba->last_data_time); /* in usecs */
+        /* fix from Rob Austein */
+        StatLineF("data xmit time","secs","%7.3f",
+                  etime_data1 / 1000000.0,
+                  etime_data2 / 1000000.0);
+        StatLineP("idletime max","ms","%s",
+                  ZERO_TIME(&pab->last_time)?"NA":
+                  (snprintf(bufl,sizeof(bufl),"%8.1f",(double)pab->idle_max/1000.0),bufl),
+                  ZERO_TIME(&pba->last_time)?"NA":
+                  (snprintf(bufr,sizeof(bufr),"%8.1f",(double)pba->idle_max/1000.0),bufr));
+
+        if ((pab->num_hardware_dups != 0) || (pba->num_hardware_dups != 0)  || csv || tsv || (sv != NULL)) {
+            StatLineI("hardware dups","segs",
+                      pab->num_hardware_dups, pba->num_hardware_dups);
+
+            if(!(csv || tsv || (sv != NULL)))       
+              fprintf(stdout,
+                      "       ** WARNING: presence of hardware duplicates makes these figures suspect!\n");
+        }
+
+        /* do the throughput calcs */
+        etime /= 1000000.0;  /* convert to seconds */
+        if (etime == 0.0)
+            StatLineP("throughput","","%s","NA","NA");
+        else
+            StatLineF("throughput","Bps","%8.0f",
+                      (double) (pab->unique_bytes) / etime,
+                      (double) (pba->unique_bytes) / etime);
+        ptp = ptp->next;
     
-    StatLineI("max sack blks/ack","", pab->max_sack_blocks, pba->max_sack_blocks);
-    StatLineI("unique bytes sent","",
-	      pab->unique_bytes, pba->unique_bytes);
-    StatLineI("actual data chunks","", pab->data_count, pba->data_count);
-    StatLineI("actual data bytes","", pab->data_bytes, pba->data_bytes);
-    StatLineI("rexmt data pkts","", pab->rexmit_pkts, pba->rexmit_pkts);
-    StatLineI("rexmt data bytes","",
-	      pab->rexmit_bytes, pba->rexmit_bytes);
-    StatLineI("zwnd probe pkts","", 
-		  pab->num_zwnd_probes, pba->num_zwnd_probes);
-    StatLineI("zwnd probe bytes","",
-	      pab->zwnd_probe_bytes, pba->zwnd_probe_bytes);
-    StatLineI("outoforder pkts","",
-	      pab->out_order_pkts, pba->out_order_pkts);
-    StatLineI("pushed data pkts","", pab->data_pkts_push, pba->data_pkts_push);
-    StatLineP("INIT/SHUTDOWN pkts sent","","%s",
-	      (snprintf(bufl,sizeof(bufl),"%d/%d",
-		       pab->init_count, pab->shutdown_count),bufl),
-	      (snprintf(bufr,sizeof(bufr),"%d/%d",
-		       pba->init_count, pba->shutdown_count),bufr));
-    if (pab->f1323_ws || pba->f1323_ws || pab->f1323_ts || pba->f1323_ts || csv || tsv || (sv != NULL)) {
-	StatLineP("req 1323 ws/ts","","%s",
-		  (snprintf(bufl,sizeof(bufl),"%c/%c",
-		      pab->f1323_ws?'Y':'N',pab->f1323_ts?'Y':'N'),bufl),
-		  (snprintf(bufr,sizeof(bufr),"%c/%c",
-		      pba->f1323_ws?'Y':'N',pba->f1323_ts?'Y':'N'),bufr));
-    }
-    if (pab->f1323_ws || pba->f1323_ws || csv || tsv || (sv != NULL)) {
-	StatLineI("adv wind scale","",
-		  (u_long)pab->window_scale, (u_long)pba->window_scale);
-    }
-    if (pab->fsack_req || pba->fsack_req || csv || tsv || (sv != NULL)) {
-	StatLineP("req sack","","%s",
-		  pab->fsack_req?"Y":"N",
-		  pba->fsack_req?"Y":"N");
-	StatLineI("sacks sent","",
-		  pab->sacks_sent,
-		  pba->sacks_sent);
-    }
-    StatLineI("urgent data pkts", "pkts",
-	      pab->urg_data_pkts,
-	      pba->urg_data_pkts);
-    StatLineI("urgent data bytes", "bytes",
-	      pab->urg_data_bytes,
-	      pba->urg_data_bytes);
-    StatLineI("mss requested","bytes", pab->mss, pba->mss);
-    StatLineI("max segm size","bytes",
-	      pab->max_seg_size,
-	      pba->max_seg_size);
-    StatLineI("min segm size","bytes",
-	      pab->min_seg_size,
-	      pba->min_seg_size);
-    StatLineI("avg payload size","bytes",
-	      (int)((double)pab->data_bytes / ((double)pab->chunk_count+.001)),
-	      (int)((double)pba->data_bytes / ((double)pba->chunk_count+.001)));
-    StatLineI("max win adv","bytes", pab->win_max, pba->win_max);
-    StatLineI("min win adv","bytes", pab->win_min, pba->win_min);
-    StatLineI("zero win adv","times",
-	      pab->win_zero_ct, pba->win_zero_ct);
-    // Average window advertisement is calculated only for window scaled pkts
-    // if we have seen this connection using window scaling.
-    // Otherwise, it is just the regular way of dividing the sum of 
-    // all window advertisements by the total number of packets.
-     
-    if (pab->window_stats_updated_for_scaling &&
-	pba->window_stats_updated_for_scaling)
-	  StatLineI("avg win adv","bytes",
-		    pab->win_scaled_pkts==0?0:
-		    (pab->win_tot/pab->win_scaled_pkts),
-		    pba->win_scaled_pkts==0?0:
-		    (pba->win_tot/pba->win_scaled_pkts));
-    else
-	  StatLineI("avg win adv","bytes",
-		    pab->packets==0?0:pab->win_tot/pab->packets,
-		    pba->packets==0?0:pba->win_tot/pba->packets);
-    if (print_owin) {
-	StatLineI("max owin","bytes", pab->owin_max, pba->owin_max);
-	StatLineI("min non-zero owin","bytes", pab->owin_min, pba->owin_min);
-	StatLineI("avg owin","bytes",
-		  pab->owin_count==0?0:pab->owin_tot/pab->owin_count,
-		  pba->owin_count==0?0:pba->owin_tot/pba->owin_count);
-	if (etime == 0.0) {
-		StatLineP("wavg owin", "", "%s", "NA", "NA");	
-	}
-	else {
-		StatLineI("wavg owin","bytes", 
-			  (u_llong)(pab->owin_wavg/((double)etime/1000000)), 
-		  	  (u_llong)(pba->owin_wavg/((double)etime/1000000)));
-   	} 
-    }
-    StatLineI("initial window","bytes",
-	      pab->initialwin_bytes, pba->initialwin_bytes);
-    StatLineI("initial window","pkts",
-	      pab->initialwin_segs, pba->initialwin_segs);
-
-    /* compare to theoretical length of the stream (not just what
-       we saw) using the SYN and FIN
-     * Seq. Space wrap around calculations:
-     * Calculate stream length using last_seq_num seen, first_seq_num
-     * seen and wrap_count.
-     * first_seq_num = syn
-     * If reset_set, last_seq_num = latest_seq
-     *          else last_seq_num = fin
-     */
-    
-    pab_last = (pab->reset_count>0)?pab->latest_seq:pab->fin;
-    
-    pba_last = (pba->reset_count>0)?pba->latest_seq:pba->fin;
-    
-    /* calculating stream length for direction pab */
-    if ((pab->init_count > 0) && (pab->shutdown_count > 0)) {
-	if (pab->seq_wrap_count > 0) {
-	    if (pab_last > pab->init) {
-		stream_length_pab = pab_last + (MAX_32 * pab->seq_wrap_count) - pab->init - 1;
-	    }
-	    else {
-		stream_length_pab = pab_last + (MAX_32 * (pab->seq_wrap_count+1)) - pab->init - 1;
-	    }
-	}
-	else {
-	    if (pab_last > pab->init) {
-		stream_length_pab = pab_last - pab->init - 1;
-	    }
-	    else {
-		stream_length_pab = MAX_32 + pab_last - pab->init - 1;
-	    }
-	}
-    }
-
-    /* calculating stream length for direction pba */
-    if ((pba->init_count > 0) && (pba->shutdown_count > 0)) {
-	if (pba->seq_wrap_count > 0) {
-	    if (pba_last > pba->init) {
-		stream_length_pba = pba_last + (MAX_32 * pba->seq_wrap_count) - pba->init - 1;
-	    }
-	    else {
-		stream_length_pba = pba_last + (MAX_32 * (pba->seq_wrap_count+1)) - pba->init - 1;
-	    }
-	}
-	else {
-	    if (pba_last > pba->init) {
-		stream_length_pba = pba_last - pba->init - 1;
-	    }
-	    else {
-		stream_length_pba = MAX_32 + pba_last - pba->init - 1;
-	    }
-	}
-    }
-
-    /* print out values */
-    if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
-	char *format = "%8" FS_ULL;
-	StatLineFieldL("ttl stream length", "bytes", format, stream_length_pab, 0);
-    }
-    else {
-	StatLineField("ttl stream length", "", "%s", (u_long)"NA", 0);
-    }
-    if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
-	char *format = "%8" FS_ULL;
-	StatLineFieldL("ttl stream length", "bytes", format, stream_length_pba, 1);
-    }
-    else {
-	StatLineField("ttl stream length", "", "%s", (u_long)"NA", 1);
-    }
-
-    if ((pab->shutdown_count > 0) && (pab->init_count > 0)) {
-	char *format = "%8" FS_ULL;
-	StatLineFieldL("missed data", "bytes", format, (stream_length_pab - pab->unique_bytes), 0);
-    }
-    else {
-	StatLineField("missed data", "", "%s", (u_long)"NA", 0);
-    }
-    if ((pba->shutdown_count > 0) && (pba->init_count > 0)) {
-	char *format = "%8" FS_ULL;
-	StatLineFieldL("missed data", "bytes", format, (stream_length_pba - pba->unique_bytes), 1);
-    }
-    else {
-	StatLineField("missed data", "", "%s", (u_long)"NA", 1);
-    }
-    
-    /* tell how much data was NOT captured in the files */
-    StatLineI("truncated data","bytes",
-	      pab->trunc_bytes, pba->trunc_bytes);
-    StatLineI("truncated packets","pkts",
-	      pab->trunc_segs, pba->trunc_segs);
-
-    /* stats on just the data */
-    etime_data1 = elapsed(pab->first_data_time,
-			  pab->last_data_time); /* in usecs */
-    etime_data2 = elapsed(pba->first_data_time,
-			  pba->last_data_time); /* in usecs */
-    /* fix from Rob Austein */
-    StatLineF("data xmit time","secs","%7.3f",
-	      etime_data1 / 1000000.0,
-	      etime_data2 / 1000000.0);
-    StatLineP("idletime max","ms","%s",
-	      ZERO_TIME(&pab->last_time)?"NA":
-	      (snprintf(bufl,sizeof(bufl),"%8.1f",(double)pab->idle_max/1000.0),bufl),
-	      ZERO_TIME(&pba->last_time)?"NA":
-	      (snprintf(bufr,sizeof(bufr),"%8.1f",(double)pba->idle_max/1000.0),bufr));
-
-    if ((pab->num_hardware_dups != 0) || (pba->num_hardware_dups != 0)  || csv || tsv || (sv != NULL)) {
-	StatLineI("hardware dups","segs",
-		  pab->num_hardware_dups, pba->num_hardware_dups);
-
-        if(!(csv || tsv || (sv != NULL)))       
-	  fprintf(stdout,
-		  "       ** WARNING: presence of hardware duplicates makes these figures suspect!\n");
-    }
-
-    /* do the throughput calcs */
-    etime /= 1000000.0;  /* convert to seconds */
-    if (etime == 0.0)
-	StatLineP("throughput","","%s","NA","NA");
-    else
-	StatLineF("throughput","Bps","%8.0f",
-		  (double) (pab->unique_bytes) / etime,
-		  (double) (pba->unique_bytes) / etime);
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
@@ -1051,6 +1155,7 @@ tcp_pair *ptp)
         
         temp_stream_list = temp_stream_list->pnext;
     }
+    } while(ptp != NULL);
     unique_stream_list = NULL;
     
     if (print_rtt) {
