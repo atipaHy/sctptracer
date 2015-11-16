@@ -2435,9 +2435,33 @@ dosctptrace(
                 ++thisdir->out_order;     
         }
 
+            ///////////////////////////////////////
+              /*Christos rtt/*
+            ///////////////////////////////////////
+            /* do rtt stats */
+            if (SACK_SET(pchunk)) {
+                void* ptmp2;
+            tt_uint16 numgapblocks = 0;
+            tt_uint16 numduptsn = 0;
+            tt_uint32 tsnack = 0;
             
-        
-        ////////////////////////////////////////////
+            /* set tsn ack */
+            tt_uint32* ptofield;
+            ptmp2 = pchunk;
+            ptofield = ptmp2 + 4;
+            tsnack = ntohl(*ptofield);
+                
+                sack_type = sack_in(otherdir,tsnack,sctp_data_length,eff_win);
+
+                if ( (tsnack == (otherdir->syn+1)) &&
+                         (otherdir->syn_count == 1) )
+                         otherdir->rtt_3WHS=otherdir->rtt_last; 
+                         /* otherdir->rtt_last was set in the call to ack_in() */
+
+                otherdir->lastackno = th_ack;	
+            }
+            ///////////////////////////////////////
+
         
         /* point to next chunkhdr or eop */
         void* tmp2;
@@ -2446,23 +2470,6 @@ dosctptrace(
 
         
     }
-
-
-    ///////////////////////////////////////
-              /*Christos rtt fck/*
-    ///////////////////////////////////////
-    /* do rtt stats */
-    if (SACK_SET(pchunk)) {
-	sack_type = sack_in(otherdir,th_ack,sctp_data_length,eff_win);
-
-	if ( (th_ack == (otherdir->syn+1)) &&
-		 (otherdir->syn_count == 1) )
-		 otherdir->rtt_3WHS=otherdir->rtt_last; 
-		 /* otherdir->rtt_last was set in the call to ack_in() */
-	
-        otherdir->lastackno = th_ack;	
-    }
-    ///////////////////////////////////////
     
     
     
