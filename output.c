@@ -1129,7 +1129,7 @@ tcp_pair *ptp)
                       (double) (pab->unique_bytes) / etime,
                       (double) (pba->unique_bytes) / etime);
         ptp = ptp->next;
-    } while(ptp != NULL);
+    
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
@@ -1155,6 +1155,7 @@ tcp_pair *ptp)
         
         temp_stream_list = temp_stream_list->pnext;
     }
+    } while(ptp != NULL);
     unique_stream_list = NULL;
     
     if (print_rtt) {
