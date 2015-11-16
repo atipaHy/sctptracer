@@ -2384,7 +2384,6 @@ dosctptrace(
                 if ( (tsnack == (otherdir->syn+1)) &&
                          (otherdir->syn_count == 1) )
                          otherdir->rtt_3WHS=otherdir->rtt_last; 
-                         /* otherdir->rtt_last was set in the call to ack_in() */
 
                 otherdir->lastackno = th_ack;	
             }
