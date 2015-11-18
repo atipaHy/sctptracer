@@ -742,6 +742,8 @@ extern udp_pair **utp;		/* array of pointers to allocated pairs */
 
 
 /* option flags */
+extern Bool path;
+extern Bool stream;
 extern Bool colorplot;
 extern Bool dump_rtt;
 extern Bool graph_rtt;
