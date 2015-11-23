@@ -100,6 +100,8 @@ static char *FileToBuf(char *filename);
 
 
 /* option flags and default values */
+Bool path = FALSE;
+Bool stream = FALSE;
 Bool colorplot = TRUE;
 Bool dump_rtt = FALSE;
 Bool graph_rtt = FALSE;
@@ -605,7 +607,9 @@ Graphing detail options\n\
 Misc options\n\
   -Z      dump raw rtt sample times to file[s]\n\
   -p      print all packet contents (can be very long)\n\
+  -path   print all paths\n\
   -P      print packet contents for selected connections\n\
+  -p      print all streams\n\
   -t      'tick' off the packet numbers as a progress indication\n\
   -fEXPR  output filtering (see -hfilter)\n\
   -v      print version information and exit\n\
@@ -2174,6 +2178,10 @@ ParseArgs(
 		  case 'W': print_owin = TRUE; break;
 		  case 'X': hex = TRUE; break;
 		  case 'Z': dump_rtt = TRUE; break;
+                  case 'a':
+		    BadArg(argsource,
+			   "unknown module option (-a...)\n");
+		    break;
 		  case 'b': printbrief = TRUE; break;
 		  case 'c': ignore_non_comp = TRUE; break;
 		  case 'd': ++debug; break;
@@ -2228,10 +2236,33 @@ ParseArgs(
 		        GrabOnly(argsource,argv[i]+1);
 		    }
 		    *(argv[i]+1) = '\00'; break;
-		  case 'p': printallofem = TRUE; break;
+		  case 'p': 
+                    if (strcmp(argv[i],"p") == 0){
+                        printallofem = TRUE;
+                    }
+                    else if (strcasecmp(argv[i],"path") == 0) {
+			path = TRUE;
+		    }
+                    else {
+			BadArg(argsource, "only -p and path are legal\n");
+		    }
+		    *(argv[i]+1) = '\00';
+		    break;
 		  case 'q': printsuppress = TRUE; break;
 		  case 'r': print_rtt = TRUE; break;
-		  case 's': use_short_names = TRUE; break;
+		  case 's': 
+                    if (strcmp(argv[i],"s") == 0){
+                        use_short_names = TRUE;
+                    }
+                    else if(strcasecmp(argv[i],"stream") == 0){
+                        stream = TRUE;
+                        printf("stream is TRUE\n");
+                    }
+                    else {
+			BadArg(argsource, "only -s and -stream are legal\n");
+		    }
+		    *(argv[i]+1) = '\00';
+                    break;
 		  case 't': printticks = TRUE; break;
 		  case 'u': do_udp = TRUE; break;
 		  case 'v': Version(); exit(0); break;

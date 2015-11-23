@@ -1133,27 +1133,30 @@ tcp_pair *ptp)
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
-    stream_info *temp_stream_list = unique_stream_list;
-    while(temp_stream_list != NULL){
-        printf("\nStream: %d\n", temp_stream_list->stream_id);
-        fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
-	       host1,host2,host2,host1);
-        StatLineI("Data chunks","", GetDataInfo(pab, temp_stream_list->stream_id).data_count, 
-                GetDataInfo(pba, temp_stream_list->stream_id).data_count);
-        
-        StatLineI("Data bytes","", GetDataInfo(pab, temp_stream_list->stream_id).data_bytes, 
-                GetDataInfo(pba, temp_stream_list->stream_id).data_bytes);
-        
-        StatLineI("Data unique bytes","", GetDataInfo(pab, temp_stream_list->stream_id).unique_bytes, 
-                GetDataInfo(pba, temp_stream_list->stream_id).unique_bytes);
-        
-        StatLineI("Rexmit bytes","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_bytes, 
-                GetDataInfo(pba, temp_stream_list->stream_id).rexmit_bytes);
-        
-        StatLineI("Rexmit chunks","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_pkts, 
-                GetDataInfo(pba, temp_stream_list->stream_id).rexmit_pkts);
-        
-        temp_stream_list = temp_stream_list->pnext;
+    if(stream){
+        stream_info *temp_stream_list = unique_stream_list;
+        while(temp_stream_list != NULL){
+            printf("\nStream: %d\n", temp_stream_list->stream_id);
+            fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
+                   host1,host2,host2,host1);
+            StatLineI("Data chunks","", GetDataInfo(pab, temp_stream_list->stream_id).data_count, 
+                    GetDataInfo(pba, temp_stream_list->stream_id).data_count);
+
+            StatLineI("Data bytes","", GetDataInfo(pab, temp_stream_list->stream_id).data_bytes, 
+                    GetDataInfo(pba, temp_stream_list->stream_id).data_bytes);
+
+            StatLineI("Data unique bytes","", GetDataInfo(pab, temp_stream_list->stream_id).unique_bytes, 
+                    GetDataInfo(pba, temp_stream_list->stream_id).unique_bytes);
+
+            StatLineI("Rexmit bytes","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_bytes, 
+                    GetDataInfo(pba, temp_stream_list->stream_id).rexmit_bytes);
+
+            StatLineI("Rexmit chunks","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_pkts, 
+                    GetDataInfo(pba, temp_stream_list->stream_id).rexmit_pkts);
+
+            temp_stream_list = temp_stream_list->pnext;
+        }
+        unique_stream_list = NULL;
     }
     } while(ptp != NULL);
     unique_stream_list = NULL;
