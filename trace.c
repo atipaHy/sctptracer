@@ -3617,7 +3617,7 @@ trace_done(void)
   if (!run_continuously) {
     if (!printsuppress) {
 	if (num_sctp_pairs > 0 || global_sctp) {
-	    fprintf(stdout,"%sSCTP connection info:\n", comment);
+	    fprintf(stdout,"%sSCTP association info:\n", comment);
 	}
         else if(num_tcp_pairs > 0){
 	    fprintf(stdout,"%sTCP connection info:\n", comment);
@@ -3633,7 +3633,7 @@ trace_done(void)
             fprintf(stdout,"%s%d SCTP %s traced:\n",
                     comment,
                     num_sctp_pairs + 1,
-                    num_sctp_pairs==0?"connection":"connections");
+                    num_sctp_pairs==0?"association":"associations");
         else
             fprintf(stdout,"%s%d TCP %s traced:\n",
                     comment,
@@ -3817,7 +3817,7 @@ trace_done(void)
 		    else {
 		       if (ix > 0)
 			 fprintf(stdout,"================================\n");
-		       fprintf(stdout,"SCTP connection %d:\n", ix+1);
+		       fprintf(stdout,"SCTP association %d:\n", ix+1);
 		       
 		    }
                     SctpPrintTrace(ptp);
