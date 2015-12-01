@@ -456,6 +456,9 @@ rtt_ackin (tcb * ptcb,
 
     /* how long did it take */
     etime_rtt = elapsed (pseg->time, current_time);
+    
+    if (etime_rtt !=0){
+        
 
     if (rexmit_prev) {
 	/* first, check for the situation in which the segment being ACKed */
@@ -547,7 +550,7 @@ rtt_ackin (tcb * ptcb,
 
     return (ret);
 }
-
+}
 
 
 static void
