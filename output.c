@@ -722,8 +722,8 @@ tcp_pair *ptp)
     double etime_data2;
     tcb *pab = &ptp->a2b;
     tcb *pba = &ptp->b2a;
-    char *host1 = pab->host_letter;
-    char *host2 = pba->host_letter;
+    char *host1;
+    char *host2;
     char bufl[40],bufr[40];
     stream_info *unique_stream_list = NULL;
     
@@ -731,6 +731,7 @@ tcp_pair *ptp)
     tcp_pair *tmpptr = ptp->next;
     while(tmpptr != NULL)
     {
+        
         pab->packets += tmpptr->a2b.packets;
         pba->packets += tmpptr->b2a.packets;
         
@@ -818,13 +819,17 @@ tcp_pair *ptp)
         tmpptr = tmpptr->next;
     }
     
+    ptp->packets += (pab->packets + pba->packets);
     
-    /*print which print-function we are using*/
-    printf("\n----------------SCTP-PRINT----------------\n");
+    int pathNumber = 1;
+    int isPath = 0;
+    
     do
     {
         pab = &ptp->a2b;
         pba = &ptp->b2a;
+        host1 = pab->host_letter;
+        host2 = pba->host_letter;
         if(pab->packets == 0 && pba->packets == 0)
         {
             ptp = ptp->next;
@@ -848,7 +853,9 @@ tcp_pair *ptp)
 
         /* Check if comma-separated-values or tab-separated-values
          * has been requested.
-         */ 
+         */
+       if(isPath)
+        fprintf(stdout,"\n\n\t\t\t\tPath %d \n\n", pathNumber++);
        if(csv || tsv || (sv != NULL)) {
            fprintf(stdout,"%s%s%s%s%s%s%s%s",
                    ptp->a_hostname, sp, ptp->b_hostname, sp,
@@ -864,17 +871,19 @@ tcp_pair *ptp)
         }
         else {
            fprintf(stdout,"\thost %-4s      %s\n",
-                   (snprintf(bufl,sizeof(bufl),"%s:", host1),bufl), ptp->a_endpoint);
+                  (snprintf(bufl,sizeof(bufl),"%s:", host1),bufl), ptp->a_endpoint);
            fprintf(stdout,"\thost %-4s      %s\n",
-                   (snprintf(bufl,sizeof(bufl),"%s:", host2),bufl), ptp->b_endpoint);
-           fprintf(stdout,"\tcomplete conn: %s",
-                   ConnAbort(ptp)?"RESET":(
-                                           SctpConnComplete(ptp)?"yes":"no"));
-           if (SctpConnComplete(ptp))
-             fprintf(stdout,"\n");
-           else
-             fprintf(stdout,"\t(INITs: %u)  (SHUTDOWNs: %u)\n",
-                     InitCount(ptp), ShutdownCount(ptp));
+                  (snprintf(bufl,sizeof(bufl),"%s:", host2),bufl), ptp->b_endpoint);
+           if(!isPath){
+            fprintf(stdout,"\tcomplete assoc: %s",
+                    ConnAbort(ptp)?"RESET":(
+                                            SctpConnComplete(ptp)?"yes":"no"));
+            if (SctpConnComplete(ptp))
+              fprintf(stdout,"\n");
+            else
+              fprintf(stdout,"\t(INITs: %u)  (SHUTDOWNs: %u)\n",
+                      InitCount(ptp), ShutdownCount(ptp));
+           }
 
            fprintf(stdout,"\tfirst packet:  %s\n", ts2ascii(&ptp->first_time));
            fprintf(stdout,"\tlast packet:   %s\n", ts2ascii(&ptp->last_time));
@@ -882,10 +891,12 @@ tcp_pair *ptp)
            fprintf(stdout,"\telapsed time:  %s\n", elapsed2str(etime));
 
            fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
-           fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list));
+           //fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list)); Does not work per assoc
 
-           fprintf(stdout,"\tfilename:      %s\n", ptp->filename);
-
+           fprintf(stdout,"\tfilename:      %s\n\n", ptp->filename);
+           if(!isPath)
+            fprintf(stdout,"\t\t\t\tTotal association statistics\n");
+           
            fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
                    host1,host2,host2,host1);
         }
@@ -1133,32 +1144,33 @@ tcp_pair *ptp)
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
-    if(stream){
-        stream_info *temp_stream_list = unique_stream_list;
-        while(temp_stream_list != NULL){
-            printf("\nStream: %d\n", temp_stream_list->stream_id);
-            fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
-                   host1,host2,host2,host1);
-            StatLineI("Data chunks","", GetDataInfo(pab, temp_stream_list->stream_id).data_count, 
-                    GetDataInfo(pba, temp_stream_list->stream_id).data_count);
+        if(stream){
+            stream_info *temp_stream_list = unique_stream_list;
+            while(temp_stream_list != NULL){
+                printf("\nStream: %d\n", temp_stream_list->stream_id);
+                fprintf(stdout,"   %s->%s:			                 %s->%s:\n",
+                       host1,host2,host2,host1);
+                StatLineI("Data chunks","", GetDataInfo(pab, temp_stream_list->stream_id).data_count, 
+                        GetDataInfo(pba, temp_stream_list->stream_id).data_count);
 
-            StatLineI("Data bytes","", GetDataInfo(pab, temp_stream_list->stream_id).data_bytes, 
-                    GetDataInfo(pba, temp_stream_list->stream_id).data_bytes);
+                StatLineI("Data bytes","", GetDataInfo(pab, temp_stream_list->stream_id).data_bytes, 
+                        GetDataInfo(pba, temp_stream_list->stream_id).data_bytes);
 
-            StatLineI("Data unique bytes","", GetDataInfo(pab, temp_stream_list->stream_id).unique_bytes, 
-                    GetDataInfo(pba, temp_stream_list->stream_id).unique_bytes);
+                StatLineI("Data unique bytes","", GetDataInfo(pab, temp_stream_list->stream_id).unique_bytes, 
+                        GetDataInfo(pba, temp_stream_list->stream_id).unique_bytes);
 
-            StatLineI("Rexmit bytes","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_bytes, 
-                    GetDataInfo(pba, temp_stream_list->stream_id).rexmit_bytes);
+                StatLineI("Rexmit bytes","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_bytes, 
+                        GetDataInfo(pba, temp_stream_list->stream_id).rexmit_bytes);
 
-            StatLineI("Rexmit chunks","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_pkts, 
-                    GetDataInfo(pba, temp_stream_list->stream_id).rexmit_pkts);
+                StatLineI("Rexmit chunks","", GetDataInfo(pab, temp_stream_list->stream_id).rexmit_pkts, 
+                        GetDataInfo(pba, temp_stream_list->stream_id).rexmit_pkts);
 
-            temp_stream_list = temp_stream_list->pnext;
+                temp_stream_list = temp_stream_list->pnext;
+            }
+            unique_stream_list = NULL;
         }
-        unique_stream_list = NULL;
-    }
-    } while(ptp != NULL);
+        isPath = 1;
+    } while(ptp != NULL && path);
     unique_stream_list = NULL;
     
     if (print_rtt) {
