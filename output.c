@@ -892,7 +892,8 @@ tcp_pair *ptp)
 
            fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
            //fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list)); Does not work per assoc
-
+           UniqueStreamCounter(ptp, &unique_stream_list);
+           
            fprintf(stdout,"\tfilename:      %s\n\n", ptp->filename);
            if(!isPath)
             fprintf(stdout,"\t\t\t\tTotal association statistics\n");

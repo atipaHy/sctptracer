@@ -2256,7 +2256,6 @@ ParseArgs(
                     }
                     else if(strcasecmp(argv[i],"stream") == 0){
                         stream = TRUE;
-                        printf("stream is TRUE\n");
                     }
                     else {
 			BadArg(argsource, "only -s and -stream are legal\n");
