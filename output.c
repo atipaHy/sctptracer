@@ -1140,6 +1140,22 @@ tcp_pair *ptp)
                       (double) (pab->unique_bytes) / etime,
                       (double) (pba->unique_bytes) / etime);
         ptp = ptp->next;
+        
+        if(!(csv || tsv || (sv != NULL)))
+	  fprintf(stdout,"\n");
+	StatLineI("RTT samples","", pab->rtt_count, pba->rtt_count);
+	StatLineF("RTT min","ms","%8.1f",
+		  (double)pab->rtt_min/1000.0,
+		  (double)pba->rtt_min/1000.0);
+	StatLineF("RTT max","ms","%8.1f",
+		  (double)pab->rtt_max/1000.0,
+		  (double)pba->rtt_max/1000.0);
+	StatLineF("RTT avg","ms","%8.1f",
+		  Average(pab->rtt_sum, pab->rtt_count) / 1000.0,
+		  Average(pba->rtt_sum, pba->rtt_count) / 1000.0);
+	StatLineF("RTT stdev","ms","%8.1f",
+		  Stdev(pab->rtt_sum, pab->rtt_sum2, pab->rtt_count) / 1000.0,
+		  Stdev(pba->rtt_sum, pba->rtt_sum2, pba->rtt_count) / 1000.0);
     
 /******************************************************************************/
 /******************Stream specific information*********************************/
