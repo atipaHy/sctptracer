@@ -1141,6 +1141,7 @@ tcp_pair *ptp)
                       (double) (pab->unique_bytes) / etime,
                       (double) (pba->unique_bytes) / etime);
         ptp = ptp->next;
+        if (print_rtt){
         
         if(!(csv || tsv || (sv != NULL)))
 	  fprintf(stdout,"\n");
@@ -1157,7 +1158,7 @@ tcp_pair *ptp)
 	StatLineF("RTT stdev","ms","%8.1f",
 		  Stdev(pab->rtt_sum, pab->rtt_sum2, pab->rtt_count) / 1000.0,
 		  Stdev(pba->rtt_sum, pba->rtt_sum2, pba->rtt_count) / 1000.0);
-    
+    }
 /******************************************************************************/
 /******************Stream specific information*********************************/
 /******************************************************************************/
@@ -1190,7 +1191,7 @@ tcp_pair *ptp)
     } while(ptp != NULL && path);
     unique_stream_list = NULL;
     
-    if (print_rtt) {
+    /*if (print_rtt) {
         if(!(csv || tsv || (sv != NULL)))
 	  fprintf(stdout,"\n");
 	StatLineI("RTT samples","", pab->rtt_count, pba->rtt_count);
@@ -1280,7 +1281,7 @@ tcp_pair *ptp)
 			pab->retr_tm_count) / 1000.0,
 		  Stdev(pba->retr_tm_sum, pba->retr_tm_sum2,
 			pba->retr_tm_count) / 1000.0);
-    }
+    }*/
    if(csv || tsv || (sv != NULL)) {
       printf("\n");
       /* Error checking: print an error message if the count of printed fields
