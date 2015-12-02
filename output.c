@@ -711,6 +711,18 @@ PrintTrace(
    }
 }
 
+stream_info* findStream(tcb* way, tt_uint16 id)
+{
+    stream_info* temp = way->stream_list;
+    while(temp != NULL)
+    {
+        if(temp->stream_id == id)
+            return temp;
+        temp = temp -> pnext;
+    }
+    return NULL;
+}
+
 void
 SctpPrintTrace(
 tcp_pair *ptp)
@@ -727,10 +739,15 @@ tcp_pair *ptp)
     char bufl[40],bufr[40];
     stream_info *unique_stream_list = NULL;
     
+    
+    
+    
+    
     /* Add path data to association */
     tcp_pair *tmpptr = ptp->next;
     while(tmpptr != NULL)
     {
+        
         
         pab->packets += tmpptr->a2b.packets;
         pba->packets += tmpptr->b2a.packets;
@@ -800,6 +817,146 @@ tcp_pair *ptp)
         
         pab->shutdown_complete_count += tmpptr->a2b.shutdown_complete_count;
         pba->shutdown_complete_count += tmpptr->b2a.shutdown_complete_count;
+        
+        /*Add all streams to the association*/
+        stream_info* pStream = tmpptr->a2b.stream_list;
+        stream_info* aStream;
+        while(pStream != NULL ){
+            aStream = findStream(pab,pStream->stream_id);
+            if(aStream == NULL){
+                aStream = malloc(sizeof(stream_info));
+                aStream->stream_id             = pStream->stream_id;
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pab->stream_list == NULL){
+                    pab->stream_list = aStream;
+                }
+                else
+                {
+                    stream_info *temp3 = pab->stream_list;
+                    while(temp3->pnext!=NULL){
+                        temp3 = temp3->pnext;
+                    }
+                    temp3->pnext = aStream;
+                    
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+            pStream = pStream->pnext;
+        }
+        
+        pStream = tmpptr->b2a.stream_list;
+        while(pStream != NULL ){
+            aStream = findStream(pba,pStream->stream_id);
+            if(aStream == NULL){
+                aStream = malloc(sizeof(stream_info));
+                aStream->stream_id             = pStream->stream_id;
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pba->stream_list == NULL){
+                    pba->stream_list = aStream;
+                }
+                else
+                {
+                    stream_info *temp3 = pba->stream_list;
+                    while(temp3->pnext!=NULL){
+                        temp3 = temp3->pnext;
+                    }
+                    temp3->pnext = aStream;
+                    
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+            pStream = pStream->pnext;
+        }
+        
+        
+        /*for(pStream = tmpptr->a2b.stream_list; pStream->pnext != NULL; pStream = pStream->pnext)
+        {
+            aStream = findStream(pab,pStream->stream_id);
+            /*if(aStream == NULL)
+            {
+                aStream = malloc(sizeof(stream_info));
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pab->stream_list == NULL)
+                    pab->stream_list = aStream;
+                else
+                {
+                    stream_info *temp3 = pab->stream_list;
+                    while(temp3->pnext!=NULL)
+                        temp3 = temp3->pnext;
+                    temp3->pnext = aStream;
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+        }
+        
+        /*for(pStream = tmpptr->b2a.stream_list; pStream->pnext != NULL; pStream = pStream->pnext)
+        {
+            aStream = findStream(pba,pStream->stream_id);
+            /*if(aStream == NULL)
+            {
+                aStream = malloc(sizeof(stream_info));
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pba->stream_list == NULL)
+                    pba->stream_list = aStream;
+                else
+                {
+                    stream_info* temp3 = pba->stream_list;
+                    while(temp3->pnext!=NULL)
+                        temp3 = temp3->pnext;
+                    temp3->pnext = aStream;
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+        }*/
+        
         
         /* Initiate time */
         if (ZERO_TIME(&ptp->first_time)) { 
