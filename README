@@ -1,4 +1,34 @@
-test
+Wen Dec 09, 2015
+
+Christos Christoforidis
+Niklas Ivarsson
+Henrik Johansson
+Jonas Nilsson
+
+Sctptracer is an extension of tcptrace with the benefit of analyze of
+sctp dump files. The same rules of all the existing commands are available
+for tcptrace but some changes have been made for the sctpracer.
+
+2 new flags are implemented, -path and –stream. For more information about
+the sctptracer please read our report <sctp_tracer_report.pdf>.
+
+Running the program
+-------------------
+
+Some simple examples:
+
+0) What are the args and what do they mean???
+     tcptrace 
+
+1) Run the program and get the path information.
+     tcptrace -l -path dumpfile
+
+2) Run the program and get the stream information.
+     tcptrace -l -stream dumpfile
+
+3) Run the program and get the RTT information.
+     tcptrace -l -path -r dumpfile
+
 Fri May 25, 2001
 
 Shawn Ostermann
