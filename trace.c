@@ -2435,9 +2435,6 @@ dosctptrace(
                 ++thisdir->out_order;     
         }
 
-            ///////////////////////////////////////
-              /*Christos rtt/*
-            ///////////////////////////////////////
             /* do rtt stats */
             if (SACK_SET(pchunk)) {
                 void* ptmp2;
@@ -2459,7 +2456,6 @@ dosctptrace(
 
                 otherdir->lastackno = th_ack;	
             }
-            ///////////////////////////////////////
 
         
         /* point to next chunkhdr or eop */

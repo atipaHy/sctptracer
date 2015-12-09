@@ -579,10 +579,6 @@ rtt_retrans (tcb * ptcb,
     pseg->time = current_time;
 }
 
-
-//////////////////////////////////////
-/*Christos sack_in*/
-//////////////////////////////////////
 enum t_ack
 sack_in (tcb * ptcb,
 	seqnum sack,
@@ -709,7 +705,6 @@ sack_in (tcb * ptcb,
 	collapse_quad (pquad);
     return (ret);
 }
-//////////////////////////////////////
 
 
 enum t_ack
