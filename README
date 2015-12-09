@@ -5,7 +5,7 @@ Niklas Ivarsson
 Henrik Johansson
 Jonas Nilsson
 
-Sctptracer is an extension of tcptrace with the benefit of analyze of
+Sctptracer is an extension of tcptrace with the benefit of be able to analyze
 sctp dump files. The same rules of all the existing commands are available
 for tcptrace but some changes have been made for the sctpracer.
 
