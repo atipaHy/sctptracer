@@ -150,15 +150,15 @@ GetDataInfo(
     data_info not_found;
     not_found.data_count = 0;
     
-    if(current_stream == NULL){
+    if(current_stream == NULL)
         return not_found;
-    }
+    
     while(current_stream != NULL){
-        if(current_stream->stream_id == streamid)   {return current_stream->datainfo;}
+        if(current_stream->stream_id == streamid)   
+            return current_stream->datainfo;
         
         current_stream = current_stream->pnext;
     }
-
     return not_found;
 }
 
@@ -711,6 +711,20 @@ PrintTrace(
    }
 }
 
+/*Look for an id in the tcb, return the address if found, else return NULL*/
+stream_info* findStream(tcb* way, tt_uint16 id)
+{
+    stream_info* temp = way->stream_list;
+    while(temp != NULL)
+    {
+        if(temp->stream_id == id)
+            return temp;
+        temp = temp -> pnext;
+    }
+    return NULL;
+}
+
+
 void
 SctpPrintTrace(
 tcp_pair *ptp)
@@ -727,10 +741,12 @@ tcp_pair *ptp)
     char bufl[40],bufr[40];
     stream_info *unique_stream_list = NULL;
     
+    
     /* Add path data to association */
     tcp_pair *tmpptr = ptp->next;
     while(tmpptr != NULL)
     {
+        
         
         pab->packets += tmpptr->a2b.packets;
         pba->packets += tmpptr->b2a.packets;
@@ -800,6 +816,80 @@ tcp_pair *ptp)
         
         pab->shutdown_complete_count += tmpptr->a2b.shutdown_complete_count;
         pba->shutdown_complete_count += tmpptr->b2a.shutdown_complete_count;
+        
+        /*Add all streams to the association*/
+        stream_info* pStream = tmpptr->a2b.stream_list;
+        stream_info* aStream;
+        while(pStream != NULL ){
+            aStream = findStream(pab,pStream->stream_id);
+            if(aStream == NULL){
+                aStream = malloc(sizeof(stream_info));
+                aStream->stream_id             = pStream->stream_id;
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pab->stream_list == NULL){
+                    pab->stream_list = aStream;
+                }
+                else
+                {
+                    stream_info *temp3 = pab->stream_list;
+                    while(temp3->pnext!=NULL){
+                        temp3 = temp3->pnext;
+                    }
+                    temp3->pnext = aStream;
+                    
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+            pStream = pStream->pnext;
+        }
+        
+        pStream = tmpptr->b2a.stream_list;
+        while(pStream != NULL ){
+            aStream = findStream(pba,pStream->stream_id);
+            if(aStream == NULL){
+                aStream = malloc(sizeof(stream_info));
+                aStream->stream_id             = pStream->stream_id;
+                aStream->datainfo.data_bytes   = pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   = pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  = pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes = pStream->datainfo.unique_bytes;
+                aStream->pnext = NULL;
+                if(pba->stream_list == NULL){
+                    pba->stream_list = aStream;
+                }
+                else
+                {
+                    stream_info *temp3 = pba->stream_list;
+                    while(temp3->pnext!=NULL){
+                        temp3 = temp3->pnext;
+                    }
+                    temp3->pnext = aStream;
+                    
+                }
+            }
+            else
+            {
+                aStream->datainfo.data_bytes   += pStream->datainfo.data_bytes;
+                aStream->datainfo.data_count   += pStream->datainfo.data_count;
+                aStream->datainfo.rexmit_bytes += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.rexmit_pkts  += pStream->datainfo.rexmit_bytes;
+                aStream->datainfo.unique_bytes += pStream->datainfo.unique_bytes;
+            }
+            pStream = pStream->pnext;
+        }
         
         /* Initiate time */
         if (ZERO_TIME(&ptp->first_time)) { 
@@ -891,7 +981,7 @@ tcp_pair *ptp)
            fprintf(stdout,"\telapsed time:  %s\n", elapsed2str(etime));
 
            fprintf(stdout,"\ttotal packets: %" FS_ULL "\n", ptp->packets);
-           //fprintf(stdout,"\ttotal streams: %" FS_ULL "\n", UniqueStreamCounter(ptp, &unique_stream_list)); Does not work per assoc
+ 
            UniqueStreamCounter(ptp, &unique_stream_list);
            
            fprintf(stdout,"\tfilename:      %s\n\n", ptp->filename);
@@ -942,7 +1032,8 @@ tcp_pair *ptp)
                            pab->init_count, pab->shutdown_count),bufl),
                   (snprintf(bufr,sizeof(bufr),"%d/%d",
                            pba->init_count, pba->shutdown_count),bufr));
-        if (pab->f1323_ws || pba->f1323_ws || pab->f1323_ts || pba->f1323_ts || csv || tsv || (sv != NULL)) {
+        if (pab->f1323_ws || pba->f1323_ws || pab->f1323_ts || pba->f1323_ts
+                || csv || tsv || (sv != NULL)) {
             StatLineP("req 1323 ws/ts","","%s",
                       (snprintf(bufl,sizeof(bufl),"%c/%c",
                           pab->f1323_ws?'Y':'N',pab->f1323_ts?'Y':'N'),bufl),
@@ -1141,6 +1232,8 @@ tcp_pair *ptp)
                       (double) (pab->unique_bytes) / etime,
                       (double) (pba->unique_bytes) / etime);
         ptp = ptp->next;
+        
+        /*Print RTT-information*/
         if (print_rtt){
         
         if(!(csv || tsv || (sv != NULL)))
@@ -1191,97 +1284,6 @@ tcp_pair *ptp)
     } while(ptp != NULL && path);
     unique_stream_list = NULL;
     
-    /*if (print_rtt) {
-        if(!(csv || tsv || (sv != NULL)))
-	  fprintf(stdout,"\n");
-	StatLineI("RTT samples","", pab->rtt_count, pba->rtt_count);
-	StatLineF("RTT min","ms","%8.1f",
-		  (double)pab->rtt_min/1000.0,
-		  (double)pba->rtt_min/1000.0);
-	StatLineF("RTT max","ms","%8.1f",
-		  (double)pab->rtt_max/1000.0,
-		  (double)pba->rtt_max/1000.0);
-	StatLineF("RTT avg","ms","%8.1f",
-		  Average(pab->rtt_sum, pab->rtt_count) / 1000.0,
-		  Average(pba->rtt_sum, pba->rtt_count) / 1000.0);
-	StatLineF("RTT stdev","ms","%8.1f",
-		  Stdev(pab->rtt_sum, pab->rtt_sum2, pab->rtt_count) / 1000.0,
-		  Stdev(pba->rtt_sum, pba->rtt_sum2, pba->rtt_count) / 1000.0);
-        if(!(csv || tsv || (sv != NULL)))
-	  fprintf(stdout,"\n");
-	StatLineF("RTT from 3WHS","ms","%8.1f",
-		  (double)pab->rtt_3WHS/1000.0,
-		  (double)pba->rtt_3WHS/1000.0);
-        if(!(csv || tsv || (sv != NULL)))
-	  fprintf(stdout,"\n");
-	StatLineI("RTT full_sz smpls","", 
-		  pab->rtt_full_count, pba->rtt_full_count);
-	StatLineF("RTT full_sz min","ms","%8.1f",
-		  (double)pab->rtt_full_min/1000.0,
-		  (double)pba->rtt_full_min/1000.0);
-	StatLineF("RTT full_sz max","ms","%8.1f",
-		  (double)pab->rtt_full_max/1000.0,
-		  (double)pba->rtt_full_max/1000.0);
-	StatLineF("RTT full_sz avg","ms","%8.1f",
-		  Average(pab->rtt_full_sum, pab->rtt_full_count) / 1000.0,
-		  Average(pba->rtt_full_sum, pba->rtt_full_count) / 1000.0);
-	StatLineF("RTT full_sz stdev","ms","%8.1f",
-		  Stdev(pab->rtt_full_sum, pab->rtt_full_sum2, pab->rtt_full_count) / 1000.0,
-		  Stdev(pba->rtt_full_sum, pba->rtt_full_sum2, pba->rtt_full_count) / 1000.0);
-        if(!(csv || tsv || (sv != NULL)))
-	  fprintf(stdout,"\n");
-	StatLineI("post-loss acks","",
-		  pab->rtt_nosample, pba->rtt_nosample);
-	if (pab->rtt_amback || pba->rtt_amback || csv || tsv || (sv != NULL)) {
-	   if(!(csv || tsv || (sv != NULL)))
-	     fprintf(stdout, "\
-\t  For the following 5 RTT statistics, only ACKs for\n\
-\t  multiply-transmitted segments (ambiguous ACKs) were\n\
-\t  considered.  Times are taken from the last instance\n\
-\t  of a segment.\n\
-");
-	    StatLineI("ambiguous acks","",
-		      pab->rtt_amback, pba->rtt_amback);
-	    StatLineF("RTT min (last)","ms","%8.1f",
-		      (double)pab->rtt_min_last/1000.0,
-		      (double)pba->rtt_min_last/1000.0);
-	    StatLineF("RTT max (last)","ms","%8.1f",
-		      (double)pab->rtt_max_last/1000.0,
-		      (double)pba->rtt_max_last/1000.0);
-	    StatLineF("RTT avg (last)","ms","%8.1f",
-		      Average(pab->rtt_sum_last, pab->rtt_count_last) / 1000.0,
-		      Average(pba->rtt_sum_last, pba->rtt_count_last) / 1000.0);
-	    StatLineF("RTT sdv (last)","ms","%8.1f",
-		      Stdev(pab->rtt_sum_last, pab->rtt_sum2_last, pab->rtt_count_last) / 1000.0,
-		      Stdev(pba->rtt_sum_last, pba->rtt_sum2_last, pba->rtt_count_last) / 1000.0);
-
-	}
-	StatLineI("segs cum acked","",
-		  pab->rtt_cumack, pba->rtt_cumack);
-	StatLineI("duplicate acks","",
-		  pab->rtt_dupack, pba->rtt_dupack);
-	StatLineI("triple dupacks","",
-		  pab->rtt_triple_dupack, pba->rtt_triple_dupack);
-	if (debug)
-	    StatLineI("unknown acks:","",
-		      pab->rtt_unkack, pba->rtt_unkack);
-	StatLineI("max # retrans","",
-		  pab->retr_max, pba->retr_max);
-	StatLineF("min retr time","ms","%8.1f",
-		  (double)((double)pab->retr_min_tm/1000.0),
-		  (double)((double)pba->retr_min_tm/1000.0));
-	StatLineF("max retr time","ms","%8.1f",
-		  (double)((double)pab->retr_max_tm/1000.0),
-		  (double)((double)pba->retr_max_tm/1000.0));
-	StatLineF("avg retr time","ms","%8.1f",
-		  Average(pab->retr_tm_sum, pab->retr_tm_count) / 1000.0,
-		  Average(pba->retr_tm_sum, pba->retr_tm_count) / 1000.0);
-	StatLineF("sdv retr time","ms","%8.1f",
-		  Stdev(pab->retr_tm_sum, pab->retr_tm_sum2,
-			pab->retr_tm_count) / 1000.0,
-		  Stdev(pba->retr_tm_sum, pba->retr_tm_sum2,
-			pba->retr_tm_count) / 1000.0);
-    }*/
    if(csv || tsv || (sv != NULL)) {
       printf("\n");
       /* Error checking: print an error message if the count of printed fields
