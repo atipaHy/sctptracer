@@ -1,9 +1,9 @@
 Wen Dec 09, 2015
 
-Christos Christoforidis
-Niklas Ivarsson
-Henrik Johansson
-Jonas Nilsson
+Christos Christoforidis (chrichri100@student.kau.se)
+Niklas Ivarsson (niklas.ivarsson@hotmail.se)
+Henrik Johansson (henkj@live.se)
+Jonas Nilsson (nils_nilsson@hotmail.com)
 
 Sctptracer is an extension of tcptrace with the benefit of be able to analyze
 sctp dump files. The same rules of all the existing commands are available
