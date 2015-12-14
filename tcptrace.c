@@ -588,6 +588,7 @@ Output format detail options\n\
   -n      don't resolve host or service names (much faster)\n\
   -s      use short names (list \"picard.cs.ohiou.edu\" as just \"picard\")\n\
 Connection filtering options\n\
+  -s      print all streams\n\
   -iN     ignore connection N (can use multiple times)\n\
   -oN[-M] only connection N (or N through M).  Arg can be used many times.\n\
           If N is a file rather than a number, read list from file instead.\n\

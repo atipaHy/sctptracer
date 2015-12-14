@@ -319,8 +319,6 @@ PrintTrace(
     char *host2 = pba->host_letter;
     char bufl[40],bufr[40];
    
-    /*print which print-function we are using*/
-    printf("\n----------------TCP-PRINT----------------\n");
     
     /* counters to use for seq. space wrap around calculations
      */
